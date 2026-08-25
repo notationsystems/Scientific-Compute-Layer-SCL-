@@ -1,10 +1,40 @@
 # SCL Architecture — Phase 1
 
+## 0. SCL is reusable; Notations/STE is one integration, not SCL's definition
+
+Read `docs/SCL_STANDALONE_BOUNDARY.md` first if you are asking "does SCL
+require STE?" — the short, repository-grounded answer is no. `native/`
+and every `python/scl/*.py` file except `ste_adapter.py` have zero
+Notations/STE dependency (checked by grep and by
+`tests/test_standalone_boundary.py`, which spawns a fresh interpreter
+with no STE checkout even on `sys.path` and proves a full computation
+still runs). The diagram immediately below (§1) describes the
+**integrated** configuration — SCL attached beneath STE inside the
+Notations stack — which remains real, verified, and unchanged. It is one
+consumer of SCL, not SCL's boundary.
+
+```
+                     SCL
+                      |
+        +-------------+-------------+
+        |                           |
+Standalone consumers          ste_adapter.py
+(scl.client, scl.quantity,          |
+ scl.errors, scl.method_block)      v
+                              Notations / STE
+                              (execution/evidence/
+                               canonical-state
+                               integration)
+```
+
 ## 1. What this repository is
 
 `Notations-CUDA-Architecture-` is the **Scientific Compute Layer (SCL)**
 repository: a new sibling to the existing `notationsystems` architecture
 repos, not a fork or a replacement of any of them.
+
+The diagram below shows SCL **integrated into Notations** — one real,
+verified configuration, not the only one (§0):
 
 ```
 Scientific Workbench / Projection Layer      (in scientific-transformer-engine, workbench/)

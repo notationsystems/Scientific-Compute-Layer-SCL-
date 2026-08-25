@@ -1,17 +1,47 @@
 # Scientific Compute Layer (SCL)
 
-The Scientific Compute Layer: native C/C++/CUDA computational capability
-attached beneath the Scientific Transformer Engine (STE), as a strict
-architectural superset extension. See `docs/SCL_ARCHITECTURE.md` for the
-full boundary description and the repository-grounded map of where SCL
-attaches to STE, `docs/SCL_CONTRACT.md` for the wire-level request/result
-contract, `docs/PHASE1_AUDIT.md` for numerical validation, failure-path,
-and CPU performance results, `docs/PHASE2_AUDIT.md` for how SCL's
-computed results conform to STE's real evidence/derived-state machinery,
-and `docs/PHASE3_AUDIT.md`/`docs/PHASE4_AUDIT.md` for CPU↔CUDA
+SCL is a **reusable native scientific-computation layer** (C/C++/CUDA):
+a request/response contract, a process-boundary CLI, and typed
+result/quantity shapes, usable by any external application. The
+Scientific Transformer Engine (STE) is **one integration environment**
+for SCL, not SCL's definition — see `docs/SCL_STANDALONE_BOUNDARY.md` for
+the repository-grounded proof (a fresh-interpreter test with no STE
+checkout even on `sys.path`) and the formal "SCL Core Independence"
+invariant. `docs/SCL_ARCHITECTURE.md` covers the full boundary
+description, including the integrated (Notations/STE) configuration;
+`docs/SCL_CONTRACT.md` is the wire-level request/result contract;
+`docs/PHASE1_AUDIT.md` covers numerical validation, failure-path, and CPU
+performance results; `docs/PHASE2_AUDIT.md` covers how SCL's computed
+results conform to STE's real evidence/derived-state machinery when
+integrated; `docs/PHASE3_AUDIT.md`/`docs/PHASE4_AUDIT.md` cover CPU↔CUDA
 build/correctness status.
 
-## Status
+## Two ways to use SCL
+
+```python
+# 1. Standalone -- any external application. No STE, no Notations.
+from scl import SCLRequest, run_scl_request, encode_lj_configuration, encode_lj_positions
+
+request = SCLRequest(
+    operation="lj_pairwise_energy_forces", backend="cpu",
+    parameters=encode_lj_configuration(epsilon=1.0, sigma=1.0, cutoff=5.0),
+    input_payload=encode_lj_positions([(0.0, 0.0, 0.0), (1.5, 0.0, 0.0)]),
+)
+result = run_scl_request(request, cli_path="/path/to/scl_cli")
+```
+
+```python
+# 2. Integrated into STE -- explicit opt-in, a separate import.
+from scl.ste_adapter import build_lj_specification, run_scl_specification
+# run_scl_specification returns STE's own ExecutionSpecification/ExecutionResult
+# and plugs directly into execution.dispatcher.SpecificationDispatcher.
+```
+
+`import scl` alone (path 1) never imports `scl.ste_adapter` or anything
+from STE — checked mechanically by `tests/test_standalone_boundary.py`,
+not left as a convention.
+
+## CUDA backend status
 
 **SCL software frontier closed; CUDA empirical validation pending
 GPU-accessible execution environment.**
@@ -59,36 +89,48 @@ available, run that harness directly rather than building another CUDA
 implementation.
 
 ```
-Scientific Workbench / Projection Layer
-            |
-Scientific Intelligence Layer (SIL)
-            |
-Scientific Transformer Engine (STE) — Rust
-            |
-Scientific Compute Layer (SCL) — C/C++/CUDA        <-- this repository
-            |
-Physical / Numerical Computation
+                              SCL
+                               |
+                 +-------------+-------------+
+                 |                           |
+        Standalone consumers            ste_adapter.py
+     (any external application)               |
+                                               v
+                              Scientific Transformer Engine (STE) — Rust
+                                               |
+                              Scientific Intelligence Layer (SIL)
+                                               |
+                              Scientific Workbench / Projection Layer
 ```
+
+The integrated configuration (SCL attached beneath STE inside the full
+Notations stack) is real and verified — see `docs/SCL_ARCHITECTURE.md`
+§1 for that diagram in its original stack form. Both are the same
+repository; which path applies depends only on whether a caller imports
+`scl.ste_adapter`.
 
 ## What's here
 
 - `native/` — the C++17 computational substrate: a Lennard-Jones pairwise
   energy/forces kernel (`lj_pairwise_energy_forces`), a CPU backend, a
   CUDA backend (compiles and links against a real CUDA 12 toolchain;
-  never GPU-executed in any session so far — see "Status" above and
-  `docs/PHASE3_AUDIT.md`/`docs/PHASE4_AUDIT.md`), and `scl_cli`, the
-  process-boundary entry point.
-- `python/scl/` — `client.py` (a standalone SCLRequest/SCLResult
-  subprocess client), `ste_adapter.py` (translates STE's real
+  never GPU-executed in any session so far — see "CUDA backend status"
+  above and `docs/PHASE3_AUDIT.md`/`docs/PHASE4_AUDIT.md`), and `scl_cli`,
+  the process-boundary entry point. No Notations/STE dependency anywhere
+  in `native/`.
+- `python/scl/` — `client.py`/`identity.py`/`errors.py`/`quantity.py`/
+  `method_block.py` (the standalone core — zero STE dependency, all
+  re-exported from `scl/__init__.py`) and `ste_adapter.py` (the *only*
+  file that imports STE: translates STE's real
   `ExecutionSpecification`/`ExecutionResult` to/from SCL calls — a
-  drop-in alternative to STE's `execution.gromacs.run_gromacs_specification`,
-  now also emitting an evidence-classed, method-blocked, typed-quantity
-  content shape — see `docs/PHASE2_AUDIT.md`), `quantity.py`, and
-  `method_block.py`.
+  drop-in alternative to `execution.gromacs.run_gromacs_specification`,
+  emitting an evidence-classed, method-blocked, typed-quantity content
+  shape — see `docs/PHASE2_AUDIT.md`). See `docs/SCL_STANDALONE_BOUNDARY.md`.
 - `tests/` — identity/provenance, subprocess client behavior, failure
   paths, numerical validation, a real integration suite against a local
   STE checkout (no mocks), full evidence/derived-state conformance
-  (Phase 2), and CPU↔CUDA build/failure-semantics coverage (Phase 3).
+  (Phase 2), CPU↔CUDA build/failure-semantics coverage (Phase 3), and the
+  standalone-boundary proof (`test_standalone_boundary.py`).
 - `scripts/run_benchmark.py` — the Phase 1 CPU performance baseline sweep.
 
 ## Build and test
@@ -110,8 +152,8 @@ a local STE checkout via the `STE_REPO` environment variable (default
 rather than failing, if none is found.
 
 To build the CUDA backend (requires the CUDA toolkit; compiles and links
-successfully, never GPU-executed in any session so far — see "Status"
-above and `docs/PHASE4_AUDIT.md`):
+successfully, never GPU-executed in any session so far — see "CUDA
+backend status" above and `docs/PHASE4_AUDIT.md`):
 
 ```sh
 cmake -S native -B native/build_cuda -DCMAKE_BUILD_TYPE=Release -DSCL_WITH_CUDA=ON

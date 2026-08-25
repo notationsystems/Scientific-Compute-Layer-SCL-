@@ -1,7 +1,7 @@
 [project]
 name = "scientific-compute-layer"
 version = "0.1.0"
-description = "SCL: the Scientific Compute Layer -- native C/C++/CUDA computational capability beneath the Scientific Transformer Engine (STE)."
+description = "SCL: a reusable native C/C++/CUDA Scientific Compute Layer, usable standalone or integrated into the Scientific Transformer Engine (STE) via scl.ste_adapter."
 requires-python = ">=3.10"
 dependencies = []
 
