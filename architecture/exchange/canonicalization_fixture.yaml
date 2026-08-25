@@ -1,0 +1,34 @@
+booleans:
+  "no": false
+  "yes": true
+empty_map_exception: {}
+empty_seq_exception: []
+floats:
+  large_exponent: 1.0e+16
+  one: 1.0
+  small_exponent: 1.0e-5
+  third: 0.3333333333333333
+  threshold_positional: 0.0001
+integers:
+  negative: -7
+  zero: 0
+nested:
+  a: first
+  b:
+    c: 1
+    d:
+      - x
+      - "y"
+nulls:
+  absent: null
+sequence_of_maps:
+  - k: 1
+  - k: 2
+strings:
+  colon_space: "needs: quoting"
+  hash: "trailing #comment-like"
+  numeric_looking: "1.5"
+  plain: plain_scalar_is_unquoted
+  reserved: "true"
+  unicode: ångström
+zzz_key_sorting_proof: sorted last
