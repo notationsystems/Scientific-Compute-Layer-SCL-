@@ -9,6 +9,51 @@ tolerance is weakened, and no new implementation work was done. This
 document is the honest report that instruction calls for, plus
 reconfirmation that everything Phase 3 established still holds.
 
+## §0 — Closure addendum: hardware target vs. execution-environment visibility
+
+Added after Phase 4's original report, once the specific target hardware
+was identified. Nothing below changes Phase 4's conclusion — it sharpens
+it with the actual target device and a second, independent runtime check.
+
+**Physical development machine (as identified, not independently
+inspectable from this session):**
+
+| Device | Role |
+|---|---|
+| NVIDIA GeForce RTX 2080 Super with Max-Q Design, 8 GB VRAM | the CUDA target |
+| Intel(R) UHD Graphics, 128 MB reported graphics memory | **not** the CUDA target — an integrated display adapter, not CUDA-capable at all |
+
+**This remote/container execution environment does not expose that GPU.**
+Checked two independent ways, both agreeing:
+
+1. `cudaGetDeviceCount()`, via the actual compiled `scl_cli` binary — **0**.
+2. `libnvidia-ml.so.1`'s `nvmlInit_v2()`, called directly (bypassing the
+   CUDA runtime entirely) — returns **`NVML_ERROR_DRIVER_NOT_LOADED`
+   (code 9)**; `nvmlDeviceGetCount_v2` correspondingly reports 0.
+
+Supporting evidence: no `nvidia` entry in `lsmod`; `dmesg` contains zero
+NVIDIA-related lines (the kernel has never even attempted to probe NVIDIA
+hardware); `/dev/nvidia0` (the per-GPU device node) and
+`/proc/driver/nvidia` (kernel driver state) are both absent;
+`nvidia-smi` is not installed. `/dev/nvidiactl` **does** exist
+(`crw-rw-rw-`, root:root) — but a control-device placeholder with no
+working driver behind it (confirmed by the NVML/kernel-module checks
+above) is not evidence of functional GPU access, and is not treated as
+such here.
+
+**The distinction this repository preserves**: physical hardware
+availability (real, on the machine described) is a separate fact from
+GPU visibility inside this execution environment (absent, checked
+directly, twice, by independent APIs). Phase 4's conclusion holds
+unchanged with the specific target hardware now on record.
+
+**SCL software frontier closed; CUDA empirical validation pending
+GPU-accessible execution environment.** No further CUDA implementation
+work should be undertaken merely to advance the project — the harness
+already exists, is already correct-by-inspection, and needs only to be
+run in an environment where the RTX 2080 Super Max-Q is actually
+reachable. See §"Next executable frontier" below.
+
 ## Hardware verification (§3)
 
 Checked directly, fresh, this session — not assumed from Phase 3's
@@ -193,14 +238,16 @@ CUDA coincident-particle fault-parity gap (Phase 1, unrelated to hardware access
 
 ## Next executable frontier
 
-**Exactly one concrete target, unchanged from Phase 3 and now stated a
-second time because it remains the actual blocker**: run the existing,
-already-compiling, already-tested harness
+Run the existing CUDA equivalence/determinism/performance harness when
+the RTX 2080 Super Max-Q is exposed to the execution environment.
+
+That is the only remaining step
 (`tests/test_cpu_cuda_equivalence.py::test_numerical_equivalence_or_honest_absence`,
-plus `native/build_cuda/tests/scl_native_tests`) in a session with real
-NVIDIA GPU hardware. No code, test, or tolerance needs to change to
-receive that result — every prerequisite is already built, committed,
-and verified working up to the exact point hardware access is required.
-This is not a design or implementation gap; it is an infrastructure
-access gap, and no further "CUDA implementation phase" against this same
-hardware-less environment would change that.
+plus `native/build_cuda/tests/scl_native_tests`, plus the performance
+sweep once equivalence passes). No code, test, or tolerance needs to
+change to receive that result — every prerequisite is already built,
+committed, and verified working up to the exact point hardware access is
+required. This is not a design or implementation gap; it is an
+infrastructure access gap, and no further "CUDA implementation phase"
+against this same hardware-less environment would change that. Do not
+create another SCL implementation phase to work around it.
