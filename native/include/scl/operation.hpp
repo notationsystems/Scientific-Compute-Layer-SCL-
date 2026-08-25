@@ -19,6 +19,64 @@
 // registration side effects, no virtual class hierarchy. A fixed table of
 // function pointers (`operation_registry.cpp`), mirroring the fixed
 // kernel array STE's own Rust `execution-cli` uses.
+//
+// ---------------------------------------------------------------------
+// THE OPERATION CONTRACT -- what a registry entry must provide.
+// ---------------------------------------------------------------------
+// Written down while there are two entries and the pattern is still
+// readable. A function-pointer table states its contract only in the
+// SHAPE of the table, which means a third operation would satisfy it by
+// imitating the first two rather than by meeting a stated requirement --
+// and imitation carries the accidents along with the intent. Each clause
+// below is mechanically checked for EVERY registered operation by
+// tests/test_operation_registry_contract.py, which enumerates the
+// registry from the binary itself rather than from a hardcoded list, so
+// a new operation is held to this contract the moment it is added.
+//
+//  1. NAME. Lowercase snake_case, naming the MATHEMATICAL operation, not
+//     the algorithm that implements it (`fourier_transform_1d`, never
+//     `fft`). The algorithm belongs in the method block, where a consumer
+//     can see which one ran without it changing the operation's identity.
+//
+//  2. CONFIGURATION DECODER. Fixed, documented byte layout. Rejects any
+//     length but its own. Every field is validated, including reserved
+//     fields, which must be zero so the layout can grow compatibly.
+//
+//  3. INPUT DECODER. Documented element size; rejects a payload that is
+//     not a whole number of elements. An empty input is a VALIDATION
+//     fault, never a silently-empty success.
+//
+//  4. VALIDATION. Semantic checks beyond structural decoding (finiteness,
+//     domain bounds), returning a reason string naming the offending
+//     field -- several existing tests assert on that text, because a
+//     fault a caller cannot act on is barely better than a crash.
+//
+//  5. BACKEND DISPATCH. Routes through `backend_unavailable_reason()`.
+//     An operation MUST NOT implement its own availability check: one
+//     source of truth for that message, or the two drift (they did once
+//     already; see native/src/backend.cpp).
+//
+//  6. OUTPUT ENCODER. Documented layout. Emitted only on success --
+//     a halted outcome carries no output, never an empty-but-present one.
+//
+//  7. METRICS. MUST emit `native_compute_seconds`. MAY emit its own
+//     operation-specific keys. MUST NOT emit another operation's keys
+//     (an operation with no particles does not report `n_particles`,
+//     not even as zero: absent and zero are different facts, the same
+//     distinction `uncertainty_kind: absent` draws one layer up).
+//
+//  8. FAULTS. Only the shared vocabulary in scl/protocol.hpp (10..14).
+//     An operation MUST NOT mint a new fault code; if a genuinely new
+//     failure kind appears, it is added to the shared vocabulary with a
+//     stated meaning, not invented locally.
+//
+//  9. TOTALITY. `run()` returns an OperationOutcome for every input and
+//     lets nothing escape. The CLI's top-level catch is a backstop for
+//     defects, not the operation's error path.
+//
+// 10. STE DESCRIPTOR. Reachable as `descriptor_header(<name>)`
+//     (python/scl/ste_adapter.py) so the operation gets its own program
+//     identity and can never inherit another operation's.
 
 #include <cstdint>
 #include <stdexcept>

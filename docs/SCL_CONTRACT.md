@@ -208,6 +208,74 @@ Two separate identity spaces, one shared scheme (see
   process — the same "checked, not trusted" posture GROMACS and the Rust
   engine both take.
 
+### 6.1 Annotating vs. participating parameters
+
+Δt surfaced this as a Fourier curiosity — two requests differing only in
+sample spacing produce byte-identical output, so they share a
+`computation_identity` while differing in `request_identity`. It is not a
+Fourier curiosity. It is a general shape, and it is stated here as a rule
+because the same shape will recur every time a parameter annotates a
+result without participating in it.
+
+Every configuration field is exactly one of:
+
+- **PARTICIPATING** — its value is read by the mathematics. Changing it
+  changes the output bytes. (Fourier: `direction`, `normalization`.
+  LJ: `epsilon`, `sigma`, `cutoff`.)
+- **ANNOTATING** — its value is never read by the mathematics. Changing it
+  cannot change the output bytes. It exists so a consumer can interpret
+  the numbers. (Fourier: `sample_spacing_seconds`.)
+
+The rule, in four clauses:
+
+1. **Both kinds enter `parameters_identity` and `request_identity`.** An
+   annotating field is part of what was *asked for*, so a request that
+   supplies it is a different request. It is carried in the configuration
+   bytes for exactly this reason — no side channel, no separate metadata
+   identity.
+2. **Only participating fields may enter `output_identity` and
+   `computation_identity`.** Those identify what was *computed*, and an
+   annotating field by definition did not affect that.
+3. **Therefore equal `computation_identity` with differing
+   `request_identity` is the SIGNATURE of an annotating field, not a
+   defect.** A cache or dedup layer that treats identity collision as
+   request equivalence is wrong at exactly this point: it may reuse the
+   output bytes, and must not reuse the interpretation.
+4. **An annotating field is never silently defaulted.** Absent and
+   present-with-the-conventional-value are different facts and must remain
+   distinguishable in `parameters_identity`. SCL does not assume Δt = 1;
+   a result computed without Δt is bin-indexed, and the method block marks
+   the frequency axis `applicable: false` rather than inventing an axis.
+   This is the same absence discipline as `uncertainty_kind: absent` one
+   layer up, and as clause 7 of the operation contract (an operation with
+   no particles reports no `n_particles`, not `n_particles: 0`) one layer
+   down. Three layers drawing the same distinction is why it is written as
+   a rule rather than as three local conventions.
+
+**Units are the next instance, and they are a sharper one.** A unit
+annotates a quantity without participating in its arithmetic — the same
+shape as Δt — but with a failure mode Δt does not have: unlike a
+frequency axis, which is visibly absent when Δt is absent, a wrong unit is
+invisibly present. When SCL grows unit-carrying quantities, clause 4 is
+the clause that matters: an absent unit must not resolve to an assumed one.
+
+The classification is mechanically enforced across the whole registry by
+`tests/test_annotating_parameters.py`, which asserts each declared field
+against its declared class rather than trusting the declaration.
+
+**Unresolved downstream edge (recorded, not solved here).** Clause 3 says
+two results with equal `computation_identity` may differ in
+interpretation. That makes *comparability* weaker than identity: two
+Fourier results over the same samples with different Δt are comparable as
+bin-indexed vectors and NOT comparable as spectra, because bin `k` denotes
+a different frequency in each. Nothing in SCL currently prevents a
+consumer from comparing them as spectra — SCL does not own the comparison
+layer, and there is no comparison layer yet to place the check in. When
+one exists, the rule it needs is: results are spectrally comparable only
+when their annotating fields agree, not merely when their
+`computation_identity` agree. Written down now so it is a known edge
+rather than a discovery.
+
 ## 7. Reproducibility — precisely scoped (Task 5)
 
 | Kind | Claimed? | Evidence |

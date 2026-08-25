@@ -173,3 +173,106 @@ def test_linear_algebra_family_is_recorded_as_missing():
 def test_cuda_state_does_not_claim_gpu_execution():
     assert DOCUMENT["cuda_state"]["gpu_executed"] is False
     assert DOCUMENT["cuda_state"]["compiled"] is True
+
+
+# --- blocking requirements ------------------------------------------------
+
+def _blocking_rows():
+    for name, spec in WORKLOADS.items():
+        for row in spec["blocking_requirements"]:
+            yield name, row
+
+
+def test_blocking_requirement_rows_use_a_fixed_shape_and_vocabulary():
+    """A requirement arrives in the other repository as something to ANSWER
+    only if it is structured. Prose in `notes` arrives as something to
+    read."""
+    required = {"requirement", "owner", "statement", "measured_basis",
+                "consequence_if_unmet", "status"}
+    for name, row in _blocking_rows():
+        assert required <= set(row), f"{name}/{row.get('requirement')} is missing {required - set(row)}"
+        assert row["owner"] in ("daq", "scl"), f"{name}: unknown owner {row['owner']!r}"
+        assert row["status"] in ("SATISFIED", "UNSATISFIED"), f"{name}: {row['status']}"
+        assert row["measured_basis"], f"{name}/{row['requirement']} states no measured basis"
+
+
+def test_kalman_carries_both_blocking_dependencies_explicitly():
+    """The two are independent -- structured R is a DATA-SHAPE gap and
+    recursive depth is an INVARIANT gap -- so satisfying either leaves the
+    other untouched. Both must appear as their own rows, not merged into
+    one 'Kalman is hard' note."""
+    rows = {row["requirement"]: row for row in WORKLOADS["kalman_filter_linear"]["blocking_requirements"]}
+    assert "structured_measurement_uncertainty" in rows
+    assert "recursive_generation_depth" in rows
+    for row in rows.values():
+        assert row["status"] == "UNSATISFIED"
+        assert row["owner"] == "daq"
+    depth = rows["recursive_generation_depth"]
+    assert "vacuously_enforced" in depth["statement"] + depth["measured_basis"]
+    assert "proposed_rule" in depth, "the depth correction must travel as a stated rule, not a hint"
+    assert "composition" in depth["proposed_rule"], "the guard clause closes composition, not just recursion"
+
+
+def test_the_three_unimplemented_linear_algebra_workloads_all_carry_rows():
+    for workload in ("least_squares", "pca", "kalman_filter_linear"):
+        assert WORKLOADS[workload]["blocking_requirements"], f"{workload} states no blocking requirement"
+
+
+def test_fourier_is_recorded_as_satisfied_and_built():
+    """The worked example of what a SATISFIED row looks like, so the shape
+    is legible from a case that actually closed."""
+    spec = WORKLOADS["fourier_transform_1d"]
+    assert spec["status_in_scl"] == "IMPLEMENTED"
+    rows = spec["blocking_requirements"]
+    assert rows, "the one built workload should still show its requirements"
+    assert all(row["status"] == "SATISFIED" for row in rows)
+
+
+def test_the_annotating_parameter_rule_travels_with_units_named():
+    """The generalization, not just the dt instance -- units are the next
+    case and the artifact must say so where PCA's unit requirement can
+    point back at it."""
+    rule = DOCUMENT["identity_model"]["annotating_vs_participating_parameters"]
+    assert "PARTICIPATING" in rule and "ANNOTATING" in rule
+    assert "units are the next instance" in rule.lower()
+    assert "must not" in rule.lower()
+    pca_units = [row for row in WORKLOADS["pca"]["blocking_requirements"]
+                 if row["requirement"] == "commensurable_units_or_explicit_scaling"]
+    assert len(pca_units) == 1
+    assert "relates_to" in pca_units[0], "the units instance should point back at the general rule"
+
+
+# --- raised findings ------------------------------------------------------
+
+def test_execution_record_divergence_is_raised_without_being_resolved():
+    """SCL raises it and does not resolve it: proposing a second
+    ExecutionRecord would be the parallel-architecture failure the design
+    forbids."""
+    finding = DOCUMENT["daq_execution_record_finding"]
+    assert finding["status"] == "RAISED_UNRESOLVED"
+    assert "daf_acquisition_only" in finding["finding"]
+    assert finding["measured_basis"], "a finding with no measured basis is an opinion"
+    assert "absorb this one, not sit beside it" in finding["daq_s_own_stated_position"]
+    assert "not proposing one" in finding["scl_position"]
+
+
+def test_absent_is_not_zero_is_a_candidate_not_a_proposal():
+    """Three independent arrivals is mild evidence, and the artifact must
+    say mild. It also has to carry the counter-consideration, or it is an
+    argument wearing an observation's clothes."""
+    entry = DOCUMENT["core_vocabulary_candidates"]["absent_is_not_zero"]
+    assert entry["status"] == "CANDIDATE_ONLY_NOT_PROPOSED"
+    assert entry["counter_consideration"]
+    assert "uncertainty_kind=absent" in entry["observation"]
+    assert "n_particles" in entry["observation"]
+
+
+def test_unresolved_edges_are_recorded_with_why_they_are_not_solved_here():
+    edges = DOCUMENT["unresolved_edges"]
+    assert "comparability_is_weaker_than_identity" in edges
+    for name, edge in edges.items():
+        assert edge["status"] == "RECORDED_UNRESOLVED", name
+        assert edge["why_it_is_not_solved_here"], name
+    spectral = edges["comparability_is_weaker_than_identity"]
+    assert "not comparable as spectra" in spectral["edge"].lower()
+    assert "annotating" in spectral["rule_needed_when_a_comparison_layer_exists"].lower()
