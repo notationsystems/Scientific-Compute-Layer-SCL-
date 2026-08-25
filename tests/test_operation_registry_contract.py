@@ -173,6 +173,26 @@ def test_clause6_halted_operations_carry_no_output_or_identities(cli_path):
         assert result.computation_identity is None
 
 
+def test_clause6_the_wire_response_omits_output_entirely_when_halted(cli_path):
+    """Clause 6 constrains what the CLI EMITS, and the previous test
+    cannot see that: `run_scl_request` sets output=None on the halted
+    branch before it ever reads `output_hex`, so an empty-but-present
+    output on the wire is invisible through the client.
+
+    Found by mutation -- making OperationOutcome::halted set
+    has_output=true survived the whole suite. Asserted here against the
+    raw JSON, which is the layer the clause is about: absent, not ""."""
+    for operation in _each_operation(cli_path):
+        envelope = json.dumps({"operation": operation, "backend": "cpu",
+                               "configuration_hex": "", "input_hex": ""}).encode()
+        proc = subprocess.run([str(cli_path)], input=envelope, capture_output=True, timeout=30)
+        response = json.loads(proc.stdout)
+        assert response["status"] == "halted"
+        assert response.get("output_hex", None) is None, (
+            f"{operation} emitted output_hex={response.get('output_hex')!r} on a halted "
+            "outcome; absent and empty-but-present are different facts")
+
+
 # --- clause 4: faults name the offending field ---------------------------
 
 def test_clause4_validation_faults_are_actionable(cli_path):
