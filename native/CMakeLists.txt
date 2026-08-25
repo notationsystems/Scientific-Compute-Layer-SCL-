@@ -27,13 +27,39 @@ add_library(scl_core STATIC
 target_include_directories(scl_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 if(SCL_WITH_CUDA)
+  # Modern CMake (CUDA_ARCHITECTURES / policy CMP0104) requires an explicit
+  # target architecture list before enabling the CUDA language -- it will
+  # not silently fall back to "detect the installed GPU" the way older
+  # CMake/nvcc invocations did, and this Phase 3 build environment has NO
+  # GPU AT ALL (verified: no /dev/nvidia*, no PCI VGA/3D device, `nvidia-
+  # smi` absent) for CMake to detect one from even if it tried. The default
+  # below is therefore a REASONABLE, DOCUMENTED CHOICE of common compute
+  # capabilities (Volta through Ada), not a value verified against real
+  # deployment hardware -- override with -DSCL_CUDA_ARCHITECTURES=... on a
+  # machine where the real target GPU is known.
+  if(NOT DEFINED SCL_CUDA_ARCHITECTURES)
+    set(SCL_CUDA_ARCHITECTURES "70;75;80;86;89" CACHE STRING
+        "Target CUDA compute capabilities (no GPU present in this build environment to detect from)")
+  endif()
+  set(CMAKE_CUDA_ARCHITECTURES ${SCL_CUDA_ARCHITECTURES})
+
   include(CheckLanguage)
   check_language(CUDA)
   if(CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
     target_sources(scl_core PRIVATE backends/cuda/lj_pairwise_cuda.cu)
+    # backend.cpp and lj_pairwise_cuda.cu both #include
+    # "backends/cuda/lj_pairwise_cuda.hpp" relative to native/ itself (that
+    # header intentionally lives OUTSIDE include/scl/ -- it is not part of
+    # the CPU-only public interface, only pulled in for a CUDA-enabled
+    # build) -- so native/ itself must be on the include path, scoped to
+    # this target only, not the default CPU-only build.
+    target_include_directories(scl_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_compile_definitions(scl_core PUBLIC SCL_WITH_CUDA)
-    set_target_properties(scl_core PROPERTIES CUDA_STANDARD 17 CUDA_SEPARABLE_COMPILATION ON)
+    set_target_properties(scl_core PROPERTIES
+      CUDA_STANDARD 17
+      CUDA_SEPARABLE_COMPILATION ON
+      CUDA_ARCHITECTURES "${SCL_CUDA_ARCHITECTURES}")
     find_package(CUDAToolkit REQUIRED)
     target_link_libraries(scl_core PUBLIC CUDA::cudart)
   else()

@@ -78,3 +78,46 @@ def _ensure_native_build():
 @pytest.fixture()
 def cli_path() -> pathlib.Path:
     return _cli_path()
+
+
+def _cuda_cli_path() -> pathlib.Path:
+    return REPO_ROOT / "native" / "build_cuda" / "scl_cli"
+
+
+@pytest.fixture(scope="session")
+def cuda_cli_path():
+    """A SEPARATE scl_cli binary, built with -DSCL_WITH_CUDA=ON, kept apart
+    from the default CPU-only `cli_path` build so the two configurations
+    never shadow each other. Returns None (callers should skip, not fail)
+    when nvcc is not installed -- an environment gap, not an architectural
+    failure, exactly `cli_path`'s and `requires_ste`'s own posture.
+
+    Even when nvcc IS present (as in the session that authored Phase 3:
+    `apt-get install nvidia-cuda-toolkit` succeeded), this build environment
+    has NO GPU (no /dev/nvidia*, no PCI VGA/3D device) -- so a binary built
+    here proves COMPILED + LINKED, never GPU-EXECUTED. Tests using this
+    fixture must keep that distinction explicit (see
+    docs/PHASE3_AUDIT.md) rather than reporting a compiled kernel as a
+    tested one."""
+    import shutil
+
+    if shutil.which("nvcc") is None:
+        return None
+    build_dir = REPO_ROOT / "native" / "build_cuda"
+    cli = _cuda_cli_path()
+    if cli.exists():
+        return cli
+    configure = subprocess.run(
+        ["cmake", "-S", str(REPO_ROOT / "native"), "-B", str(build_dir),
+         "-DCMAKE_BUILD_TYPE=Release", "-DSCL_WITH_CUDA=ON"],
+        capture_output=True, text=True,
+    )
+    if configure.returncode != 0:
+        return None
+    build = subprocess.run(
+        ["cmake", "--build", str(build_dir), "-j", str(os.cpu_count() or 2)],
+        capture_output=True, text=True,
+    )
+    if build.returncode != 0:
+        return None
+    return cli if cli.exists() else None

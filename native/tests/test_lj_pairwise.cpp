@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 #include <vector>
 
 namespace {
@@ -136,6 +137,18 @@ void test_validation_rejects_bad_parameters() {
 }
 
 // --- Test 7: backend dispatch and availability -------------------------
+//
+// Phase 3: this test now runs its real, non-#ifndef branch whenever the
+// binary is built WITHOUT CUDA support (SCL_WITH_CUDA undefined) -- the
+// compile-time BackendUnavailableError path from Phase 1, unchanged.
+// test_cuda_reports_unavailable_when_built_with_cuda_but_no_device below
+// is the NEW, Phase 3 counterpart: it runs only when SCL_WITH_CUDA IS
+// defined, and exercises the REAL runtime path (a genuine
+// cudaGetDeviceCount() call against this environment, which has no GPU
+// at all -- see native/CMakeLists.txt) rather than a compile-time stub.
+// Between the two, `scl::backend_available(scl::Backend::Cuda)` is
+// exercised for real under both configurations this repository can
+// actually build.
 void test_cuda_backend_unavailable_in_cpu_only_build() {
 #ifndef SCL_WITH_CUDA
     CHECK(!scl::backend_available(scl::Backend::Cuda));
@@ -150,6 +163,37 @@ void test_cuda_backend_unavailable_in_cpu_only_build() {
     CHECK(threw);
 #endif
     CHECK(scl::backend_available(scl::Backend::Cpu));
+}
+
+void test_cuda_reports_unavailable_when_built_with_cuda_but_no_device() {
+#ifdef SCL_WITH_CUDA
+    // This branch means the binary WAS built with -DSCL_WITH_CUDA=ON and
+    // linked against a real libcudart -- backend_available() below makes
+    // a genuine cudaGetDeviceCount() call, not a compiled-out stub. This
+    // development environment has no GPU (verified: no /dev/nvidia*, no
+    // PCI VGA/3D device) so the honest, correct answer is still "not
+    // available" -- but for a DIFFERENT reason than the CPU-only-build
+    // case above (BACKEND_UNAVAILABLE because no device is visible at
+    // RUN time, not because CUDA support was compiled out). Both must
+    // report unavailable; only the underlying cause differs, and only
+    // this branch actually exercises the CUDA runtime API call.
+    CHECK(!scl::backend_available(scl::Backend::Cuda));
+    std::vector<scl::Vec3> positions = {{0, 0, 0}, {1, 0, 0}};
+    scl::LJParameters params{1, 1, 5};
+    bool threw = false;
+    std::string message;
+    try {
+        scl::compute_lj_pairwise(scl::Backend::Cuda, positions, params);
+    } catch (const scl::BackendUnavailableError& e) {
+        threw = true;
+        message = e.what();
+    }
+    CHECK(threw);
+    // Distinguishes this from the "not compiled in" message
+    // (backend.cpp's #else branch) -- proves the RUNTIME check ran, not
+    // the compile-time guard.
+    CHECK(message.find("no CUDA device is visible") != std::string::npos);
+#endif
 }
 
 // --- Test 8: reproducibility (same input, same binary, same machine) --
@@ -177,6 +221,7 @@ int main() {
     test_force_matches_finite_difference_gradient();
     test_validation_rejects_bad_parameters();
     test_cuda_backend_unavailable_in_cpu_only_build();
+    test_cuda_reports_unavailable_when_built_with_cuda_but_no_device();
     test_bitwise_reproducible_same_process();
 
     std::printf("%d/%d checks passed\n", g_checks - g_failures, g_checks);

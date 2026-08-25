@@ -196,10 +196,10 @@ int run(std::istream& in, std::ostream& out) {
         return scl::kProcessExitOk;
     }
 
-    if (!scl::backend_available(backend)) {
+    std::string unavailable_reason = scl::backend_unavailable_reason(backend);
+    if (!unavailable_reason.empty()) {
         out << make_response("halted", scl::kFaultBackendUnavailable, backend_field, std::nullopt,
-                              "backend '" + backend_field + "' is not available in this build/host",
-                              json::object())
+                              unavailable_reason, json::object())
             << "\n";
         return scl::kProcessExitOk;
     }

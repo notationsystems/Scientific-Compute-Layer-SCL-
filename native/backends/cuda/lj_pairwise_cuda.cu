@@ -13,7 +13,7 @@
 // Only compiled when native/CMakeLists.txt's SCL_WITH_CUDA option is ON
 // and CMake's FindCUDAToolkit succeeds.
 
-#include "scl/backends/cuda/lj_pairwise_cuda.hpp"
+#include "backends/cuda/lj_pairwise_cuda.hpp"
 
 #include <cuda_runtime.h>
 
