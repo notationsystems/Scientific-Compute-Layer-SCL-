@@ -1,0 +1,3 @@
+add_executable(scl_native_tests test_lj_pairwise.cpp)
+target_link_libraries(scl_native_tests PRIVATE scl_core)
+add_test(NAME scl_native_tests COMMAND scl_native_tests)

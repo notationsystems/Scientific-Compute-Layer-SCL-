@@ -1,0 +1,10 @@
+[project]
+name = "scientific-compute-layer"
+version = "0.1.0"
+description = "SCL: the Scientific Compute Layer -- native C/C++/CUDA computational capability beneath the Scientific Transformer Engine (STE)."
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
