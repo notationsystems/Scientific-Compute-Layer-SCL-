@@ -55,7 +55,8 @@ from .client import (
     run_scl_request,
 )
 from .errors import SCLProtocolError, SCLTimeoutError
-from .method_block import lj_method_block_for
+from . import fourier
+from .method_block import fourier_method_block_for, lj_method_block_for
 from .quantity import Quantity, absent_uncertainty
 
 SCL_DESCRIPTOR_HEADER = b"ste.scl.lj-pairwise-energy-forces.v1"
@@ -87,32 +88,58 @@ def scl_version_line(cli_path: Optional[pathlib.Path] = None) -> str:
     return line
 
 
-def scl_program_descriptor(version_line: str, backend: str) -> bytes:
-    """Build the `program` bytes for an SCL lj_pairwise_energy_forces
-    workload. The backend is part of the PROGRAM, not incidental: cpu and
-    cuda are two different engines, exactly as two GROMACS versions are
-    two programs (execution/gromacs.py, `gromacs_program_descriptor`)."""
-    return SCL_DESCRIPTOR_HEADER + b"\n" + version_line.encode("utf-8") + _BACKEND_MARKER + backend.encode(
-        "utf-8"
-    )
+def descriptor_header(operation: str) -> bytes:
+    """The STE `program` descriptor header for one SCL operation.
+
+    Replaces the single hardcoded LJ constant now that SCL is
+    multi-operation. The mapping is `ste.scl.<operation-with-hyphens>.v1`,
+    which reproduces the original LJ constant BYTE-FOR-BYTE
+    (`descriptor_header("lj_pairwise_energy_forces")` ==
+    `b"ste.scl.lj-pairwise-energy-forces.v1"`), so every existing LJ
+    program identity is unchanged -- asserted directly in
+    tests/test_operation_boundary.py rather than assumed.
+
+    A different operation necessarily yields a different header, hence a
+    different `program_identity`: `fourier_transform_1d` can never inherit
+    LJ's program identity."""
+    return b"ste.scl." + operation.replace("_", "-").encode("utf-8") + b".v1"
+
+
+def operation_from_descriptor_header(header: bytes) -> str:
+    """Inverse of `descriptor_header`."""
+    text = header.decode("utf-8")
+    if not text.startswith("ste.scl.") or not text.endswith(".v1"):
+        raise EngineProtocolError(f"not an SCL program descriptor header: {text!r}")
+    return text[len("ste.scl."):-len(".v1")].replace("-", "_")
+
+
+def scl_program_descriptor(version_line: str, backend: str,
+                            operation: str = "lj_pairwise_energy_forces") -> bytes:
+    """Build the `program` bytes for an SCL workload. Both the OPERATION
+    and the BACKEND are part of the PROGRAM, not incidental: cpu and cuda
+    are two different engines, and two operations are two programs,
+    exactly as two GROMACS versions are two programs
+    (execution/gromacs.py, `gromacs_program_descriptor`)."""
+    return (descriptor_header(operation) + b"\n" + version_line.encode("utf-8")
+            + _BACKEND_MARKER + backend.encode("utf-8"))
 
 
 def _split_descriptor(program: bytes) -> str:
-    head, marker, backend = program.partition(_BACKEND_MARKER)
-    if not head.startswith(SCL_DESCRIPTOR_HEADER) or not marker:
-        raise EngineProtocolError("not an SCL lj-pairwise-energy-forces program descriptor")
-    return backend.decode("utf-8")
+    return _split_descriptor_full(program)[2]
 
 
 def _split_descriptor_full(program: bytes) -> tuple:
-    """Like _split_descriptor, but also recovers the kernel version line
-    -- needed to populate LJMethodBlock.potential_version from a real
-    ExecutionSpecification.program without re-querying the CLI."""
+    """`(version_line, operation, backend)` recovered from a real
+    ExecutionSpecification.program -- so the operation dispatched, the
+    kernel version recorded in the method block, and the backend used all
+    come from the specification itself rather than from a caller's
+    parallel bookkeeping."""
     head, marker, backend = program.partition(_BACKEND_MARKER)
-    if not head.startswith(SCL_DESCRIPTOR_HEADER) or not marker:
-        raise EngineProtocolError("not an SCL lj-pairwise-energy-forces program descriptor")
-    version_line = head[len(SCL_DESCRIPTOR_HEADER) + 1 :].decode("utf-8")  # +1 for the b"\n" separator
-    return version_line, backend.decode("utf-8")
+    if not marker or b"\n" not in head:
+        raise EngineProtocolError("not an SCL program descriptor")
+    header, _, version_line = head.partition(b"\n")
+    operation = operation_from_descriptor_header(header)
+    return version_line.decode("utf-8"), operation, backend.decode("utf-8")
 
 
 def build_lj_specification(
@@ -127,7 +154,7 @@ def build_lj_specification(
     SCL LJ pairwise workload, the same way a caller would build one for
     execution.gromacs (see gromacs_program_descriptor's callers)."""
     version_line = scl_version_line(cli_path)
-    program = scl_program_descriptor(version_line, backend)
+    program = scl_program_descriptor(version_line, backend, "lj_pairwise_energy_forces")
     configuration = encode_lj_configuration(epsilon, sigma, cutoff)
     input_payload = encode_lj_positions(positions)
     return ExecutionSpecification(program=program, configuration=configuration, input_payload=input_payload)
@@ -148,9 +175,9 @@ def run_scl_specification(
     response) -- never for a normal computational halt, which comes back
     as `ExecutionResult(status="halted", ...)` with `output=None`,
     exactly like a halted GROMACS run."""
-    backend = _split_descriptor(spec.program)
+    _version_line, operation, backend = _split_descriptor_full(spec.program)
     request = SCLRequest(
-        operation="lj_pairwise_energy_forces",
+        operation=operation,
         backend=backend,
         parameters=spec.configuration,
         input_payload=spec.input_payload,
@@ -273,7 +300,7 @@ def interpret_lj_result(candidate, result: ExecutionResult) -> dict:
 
     total_energy, forces = decode_lj_output(result.output)
     epsilon, sigma, cutoff = decode_lj_configuration(result.specification.configuration)
-    version_line, backend = _split_descriptor_full(result.specification.program)
+    version_line, _operation, backend = _split_descriptor_full(result.specification.program)
     n_particles = len(result.specification.input_payload) // 24
 
     energy_quantity = absent_uncertainty(total_energy, unit="epsilon")
@@ -300,3 +327,98 @@ def interpret_lj_result(candidate, result: ExecutionResult) -> dict:
         "method_block": method_block.to_dict(),
         "parameters": {"epsilon": epsilon, "sigma": sigma},
     }
+
+
+# ---------------------------------------------------------------------
+# fourier_transform_1d -- the second operation, using the SAME seam,
+# the SAME identity machinery and the SAME fault vocabulary as LJ above.
+# Nothing here is Fourier-specific except the encoding of its own
+# parameters and the interpretation of its own output.
+# ---------------------------------------------------------------------
+
+FOURIER_DESCRIPTOR_HEADER = descriptor_header("fourier_transform_1d")
+
+#: Re-exported for STE-side tests, mirroring the LJ FAULT_* constants --
+#: the fault vocabulary is shared, not per-operation.
+FOURIER_OPERATION = "fourier_transform_1d"
+
+
+def build_fourier_specification(
+    samples,
+    direction: int = fourier.FORWARD,
+    normalization: int = fourier.NORMALIZATION_NONE,
+    sample_spacing_seconds: Optional[float] = None,
+    backend: str = "cpu",
+    cli_path: Optional[pathlib.Path] = None,
+) -> ExecutionSpecification:
+    """Build a real ExecutionSpecification for an SCL Fourier workload.
+
+    Dimension mapping, identical in spirit to the LJ one:
+        program        WHAT would be computed -- operation + kernel version + backend
+        configuration  the parameters GOVERNING the transform -- direction,
+                       normalization, and the sampling interval (or its
+                       explicit absence)
+        input          the signal the transform is OVER -- N complex samples
+    """
+    version_line = scl_version_line(cli_path)
+    program = scl_program_descriptor(version_line, backend, FOURIER_OPERATION)
+    configuration = fourier.encode_fourier_configuration(direction, normalization, sample_spacing_seconds)
+    input_payload = fourier.encode_complex_signal([complex(s) for s in samples])
+    return ExecutionSpecification(program=program, configuration=configuration, input_payload=input_payload)
+
+
+def interpret_fourier_result(candidate, result: ExecutionResult) -> dict:
+    """Semantic content for a completed Fourier ExecutionResult -- the same
+    Phase 112b firewall discipline `interpret_lj_result` follows: the
+    computed MEANING only, never the execution bookkeeping (that rides in
+    the dispatcher's `record_raw_content`).
+
+    `value` is `spectral_power_total` (SUM_k |X_k|^2), a derived scalar
+    summary, present because `materials.model_state.update()` requires a
+    numeric `content["value"]`. It is explicitly a FUNCTION OF the result,
+    not the result: the full spectrum is carried in `quantities`, and the
+    method block records that the primary output is the spectrum.
+
+    The frequency axis is present ONLY when the caller supplied a sampling
+    interval. With no Δt, `frequency_hz` is absent from the content and
+    the method block marks it not-applicable -- SCL does not invent a
+    frequency axis (docs/SCL_CONTRACT.md)."""
+    if result.status != "completed" or result.output is None:
+        raise ValueError("interpret_fourier_result requires a completed result with output")
+
+    spectrum = fourier.decode_complex_spectrum(result.output)
+    direction, normalization, sample_spacing = fourier.decode_fourier_configuration(
+        result.specification.configuration
+    )
+    version_line, _operation, backend = _split_descriptor_full(result.specification.program)
+    n = len(spectrum)
+    bins = fourier.frequency_bins(n, sample_spacing)
+
+    method_block = fourier_method_block_for(
+        direction=direction, normalization=normalization, n_samples=n,
+        sample_spacing_seconds=sample_spacing, backend=backend, kernel_version=version_line,
+    )
+
+    content = {
+        "property": candidate.property,
+        "value": fourier.spectral_power_total(spectrum),
+        "evidence_class": LJ_EVIDENCE_CLASS,  # "computed" -- shared, not per-operation
+        "quantities": {
+            "spectral_power_total": absent_uncertainty(
+                fourier.spectral_power_total(spectrum), unit="amplitude_squared"
+            ).to_dict(),
+            "spectrum": [
+                {"re": absent_uncertainty(value.real, unit="amplitude").to_dict(),
+                 "im": absent_uncertainty(value.imag, unit="amplitude").to_dict()}
+                for value in spectrum
+            ],
+        },
+        "method_block": method_block.to_dict(),
+        "parameters": {
+            "direction": fourier.direction_name(direction),
+            "normalization": fourier.normalization_name(normalization),
+        },
+    }
+    if bins is not None:
+        content["frequency_hz"] = list(bins)
+    return content

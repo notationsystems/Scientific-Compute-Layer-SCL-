@@ -23,7 +23,7 @@ block registry.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Mapping
+from typing import Mapping, Optional
 
 
 def _applicable(value: object) -> Mapping[str, object]:
@@ -99,5 +99,96 @@ def lj_method_block_for(
         boundary_conditions="open",
         numerical_precision="float64",
         n_particles=n_particles,
+        backend=backend,
+    )
+
+
+@dataclass(frozen=True)
+class FourierMethodBlock:
+    """Method metadata for one `fourier_transform_1d` computation.
+
+    Same discipline as LJMethodBlock: every field is either a real,
+    applicable value or an explicit `applicable: False` marker with a
+    stated reason -- never omitted silently, never fabricated.
+
+    The field that matters most here is `frequency_axis`. A discrete
+    Fourier transform is defined on the sample SEQUENCE; a physical
+    frequency axis exists only if the caller told SCL how fast the signal
+    was sampled. When no sampling interval was supplied this block records
+    that as not-applicable with a reason, rather than letting a consumer
+    assume Δt = 1 and read fabricated hertz off a bin index."""
+
+    direction: str            # "forward" | "inverse"
+    normalization: str        # "none" | "one_over_n" | "one_over_sqrt_n"
+    n_samples: int
+    sample_spacing_seconds: Optional[float]  # None => genuinely absent
+    numerical_precision: str
+    algorithm: str            # the IMPLEMENTATION, distinct from the operation
+    kernel_version: str
+    backend: str
+
+    def to_dict(self) -> Mapping[str, object]:
+        block: dict = {
+            "transform": _applicable("discrete_fourier_transform_1d"),
+            "direction": _applicable(self.direction),
+            "normalization": _applicable(self.normalization),
+            "algorithm": _applicable(self.algorithm),
+            "kernel_version": _applicable(self.kernel_version),
+            "numerical_precision": _applicable(self.numerical_precision),
+            "system_definition": _applicable({"n_samples": self.n_samples}),
+            "backend": _applicable(self.backend),
+            "primary_output": _applicable("complex_spectrum_k_0_to_n_minus_1"),
+            "bin_ordering": _applicable("ascending_k_no_fftshift"),
+        }
+        if self.sample_spacing_seconds is None:
+            block["sample_spacing_seconds"] = _not_applicable(
+                "no sampling interval was supplied with the request; the transform is "
+                "defined on the sample sequence alone"
+            )
+            block["frequency_axis"] = _not_applicable(
+                "a physical frequency axis requires a sampling interval; results are "
+                "interpretable in bin/index terms only"
+            )
+        else:
+            block["sample_spacing_seconds"] = _applicable(
+                {"value": self.sample_spacing_seconds, "unit": "s"}
+            )
+            block["frequency_axis"] = _applicable(
+                {"convention": "f_k = k/(N*dt) for k <= N/2, (k-N)/(N*dt) above", "unit": "Hz"}
+            )
+        # Genuinely not applicable to a single deterministic transform.
+        block["windowing"] = _not_applicable(
+            "no window function is applied; the raw sample sequence is transformed as given"
+        )
+        block["detrending"] = _not_applicable("no detrending or mean removal is applied")
+        block["zero_padding"] = _not_applicable(
+            "the transform length equals the input length; no padding is applied"
+        )
+        return block
+
+
+def fourier_method_block_for(
+    direction: int,
+    normalization: int,
+    n_samples: int,
+    sample_spacing_seconds: Optional[float],
+    backend: str,
+    kernel_version: str,
+) -> FourierMethodBlock:
+    from .fourier import direction_name, normalization_name
+
+    # The ALGORITHM is recorded separately from the mathematical
+    # operation: the CPU path evaluates the defining O(N^2) sum, the CUDA
+    # path would use cuFFT. Same operation, same contract, different
+    # implementations -- and a consumer can tell which one ran.
+    algorithm = "direct_dft_on2" if backend == "cpu" else "cufft"
+    return FourierMethodBlock(
+        direction=direction_name(direction),
+        normalization=normalization_name(normalization),
+        n_samples=n_samples,
+        sample_spacing_seconds=sample_spacing_seconds,
+        numerical_precision="float64",
+        algorithm=algorithm,
+        kernel_version=kernel_version,
         backend=backend,
     )

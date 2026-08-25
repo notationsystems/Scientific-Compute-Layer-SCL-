@@ -30,17 +30,75 @@ Semantic content -> DispatchedMeasurement -> STE's OWN admission path
                      (SCL never calls this; the caller does)
 ```
 
-## 2. The one operation this Phase 1 substrate implements
+## 2. The operations this substrate implements
 
-`lj_pairwise_energy_forces` — truncated Lennard-Jones pairwise potential
-energy and per-particle forces for an N-particle system (see
-`SCL_ARCHITECTURE.md` §5 and `PHASE1_AUDIT.md` §3 for why this operation
-was chosen).
+SCL is multi-operation. `scl_cli` dispatches on the request's `operation`
+field through a fixed registry (`native/src/operation_registry.cpp`); each
+operation owns its own configuration/input decoding, validation, backend
+dispatch, output encoding and metrics behind `scl::Operation`
+(`native/include/scl/operation.hpp`), while the envelope, hex framing,
+backend-availability ordering, fault vocabulary and response shape are
+shared and operation-agnostic.
+
+### 2.1 `lj_pairwise_energy_forces`
+
+Truncated Lennard-Jones pairwise potential energy and per-particle forces
+for an N-particle system (see `SCL_ARCHITECTURE.md` §5 and
+`PHASE1_AUDIT.md` §3 for why this operation was chosen first).
 
 ```
 V(r) = 4*epsilon*[(sigma/r)^12 - (sigma/r)^6],  r <= cutoff
 V(r) = 0,                                        r >  cutoff   (plain truncation, not shifted)
 ```
+
+### 2.2 `fourier_transform_1d`
+
+The one-dimensional discrete Fourier transform — the MATHEMATICAL
+operation, deliberately not named "FFT": FFT is an implementation
+strategy, and the CPU backend here evaluates the defining O(N^2) sum while
+the CUDA backend would use cuFFT. Same operation, same contract, different
+algorithms; which one ran is recorded in the method block's `algorithm`
+field, never conflated with the operation identity.
+
+    forward  (direction=+1):  X_k = s * SUM_n x_n exp(-2*pi*i*k*n/N)
+    inverse  (direction=-1):  X_k = s * SUM_n x_n exp(+2*pi*i*k*n/N)
+
+| Aspect | Contract |
+|---|---|
+| input | N complex samples, `N*16` bytes, `(real f64, imag f64)` LE. A real signal is supplied with zero imaginary parts — complex-in/complex-out avoids all Hermitian-packing subtleties |
+| output | N complex bins, same layout, `k = 0..N-1` ascending, no fftshift |
+| direction | `+1` forward (negative exponent), `-1` inverse |
+| normalization | `0` none (the bare sum above), `1` `1/N`, `2` `1/sqrt(N)` (unitary) — explicit, never implicit |
+| precision | IEEE-754 float64 throughout; fixed by the contract, not a parameter |
+| supported N | any `N >= 1`; no power-of-two restriction (validated at prime N=37) |
+| sample spacing | OPTIONAL. Carried in configuration so it participates in `parameters_identity`, but **not used by the transform** |
+| frequency axis | Present only when Δt was supplied: `f_k = k/(N*Δt)` for `k <= N/2`, `(k-N)/(N*Δt)` above. With no Δt, results are bin/index-only and the method block marks the axis not-applicable. **SCL never assumes Δt = 1** |
+
+Configuration is exactly 24 bytes: `int32 direction | int32 normalization
+| int32 has_sample_spacing | int32 reserved(=0) | float64
+sample_spacing_seconds`.
+
+**Measured identity property**: two requests differing only in Δt produce
+byte-identical output, so they share an `output_identity` and
+`computation_identity` while differing in `parameters_identity` and
+request `identity()`. That is correct and deliberate — Δt does not change
+what was computed, only how a consumer may interpret it — and it is
+asserted directly in `tests/test_fourier_contract.py`.
+
+**Validation posture**: the transform is validated primarily against
+INDEPENDENT MATHEMATICS — impulse → flat spectrum, DC → single bin, pure
+tone → exactly the predicted bin(s), Parseval's energy relation, unitary
+normalization, and inverse reconstruction — because those hold regardless
+of implementation. A hand-written stdlib O(N^2) DFT oracle is also present
+but is deliberately the weakest evidence, not the primary argument: two
+implementations of one spec reading can agree and both be wrong.
+
+**Measured performance (CPU, this environment)**: cost per pair is flat at
+~23 ns and doubling N consistently quadruples runtime — textbook O(N^2),
+exactly as the direct-sum implementation intends. Native compute overtakes
+the ~4–7 ms process/JSON boundary cost at N ≈ 512 (N=2048: 96 ms native,
+103 ms wall). The measured bottleneck is therefore the ALGORITHM, not the
+SCL boundary.
 
 ## 3. `scl_cli` wire protocol
 

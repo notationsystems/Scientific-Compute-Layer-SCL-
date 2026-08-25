@@ -111,8 +111,12 @@ repository; which path applies depends only on whether a caller imports
 
 ## What's here
 
-- `native/` — the C++17 computational substrate: a Lennard-Jones pairwise
-  energy/forces kernel (`lj_pairwise_energy_forces`), a CPU backend, a
+- `native/` — the C++17 computational substrate. Two scientific
+  operations behind one fixed dispatch registry: `lj_pairwise_energy_forces`
+  (truncated Lennard-Jones energy/forces) and `fourier_transform_1d` (the
+  1-D discrete Fourier transform — the mathematical operation, not "FFT";
+  CPU evaluates the defining O(N^2) sum, CUDA would use cuFFT). A CPU
+  backend, a
   CUDA backend (compiles and links against a real CUDA 12 toolchain;
   never GPU-executed in any session so far — see "CUDA backend status"
   above and `docs/PHASE3_AUDIT.md`/`docs/PHASE4_AUDIT.md`), and `scl_cli`,

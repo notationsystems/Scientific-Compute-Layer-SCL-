@@ -55,7 +55,26 @@ from .errors import (
     SCLTimeoutError,
     SCLValidationError,
 )
-from .method_block import LJMethodBlock, lj_method_block_for
+from .fourier import (
+    FORWARD,
+    INVERSE,
+    NORMALIZATION_NONE,
+    NORMALIZATION_ONE_OVER_N,
+    NORMALIZATION_ONE_OVER_SQRT_N,
+    decode_complex_spectrum,
+    decode_fourier_configuration,
+    encode_complex_signal,
+    encode_fourier_configuration,
+    encode_real_signal,
+    frequency_bins,
+    spectral_power_total,
+)
+from .method_block import (
+    FourierMethodBlock,
+    LJMethodBlock,
+    fourier_method_block_for,
+    lj_method_block_for,
+)
 from .quantity import Quantity, absent_uncertainty
 
 __all__ = [
@@ -73,9 +92,24 @@ __all__ = [
     # typed quantities
     "Quantity",
     "absent_uncertainty",
+    # fourier_transform_1d contract
+    "FORWARD",
+    "INVERSE",
+    "NORMALIZATION_NONE",
+    "NORMALIZATION_ONE_OVER_N",
+    "NORMALIZATION_ONE_OVER_SQRT_N",
+    "encode_fourier_configuration",
+    "decode_fourier_configuration",
+    "encode_complex_signal",
+    "encode_real_signal",
+    "decode_complex_spectrum",
+    "frequency_bins",
+    "spectral_power_total",
     # method metadata
     "LJMethodBlock",
     "lj_method_block_for",
+    "FourierMethodBlock",
+    "fourier_method_block_for",
     # errors
     "SCLError",
     "SCLProtocolError",

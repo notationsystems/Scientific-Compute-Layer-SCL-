@@ -23,8 +23,16 @@ find_package(nlohmann_json 3.9 REQUIRED)
 add_library(scl_core STATIC
   src/lj_pairwise.cpp
   src/backend.cpp
+  src/fourier.cpp
+  src/operation_registry.cpp
+  src/op_lj_pairwise.cpp
+  src/op_fourier.cpp
 )
 target_include_directories(scl_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# Operation modules and the CUDA backends include "backends/cuda/..."
+# relative to native/ itself; that directory is intentionally outside
+# include/scl/ because it is not part of the CPU-only public interface.
+target_include_directories(scl_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(SCL_WITH_CUDA)
   # Modern CMake (CUDA_ARCHITECTURES / policy CMP0104) requires an explicit
@@ -47,21 +55,19 @@ if(SCL_WITH_CUDA)
   check_language(CUDA)
   if(CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
-    target_sources(scl_core PRIVATE backends/cuda/lj_pairwise_cuda.cu)
-    # backend.cpp and lj_pairwise_cuda.cu both #include
-    # "backends/cuda/lj_pairwise_cuda.hpp" relative to native/ itself (that
-    # header intentionally lives OUTSIDE include/scl/ -- it is not part of
-    # the CPU-only public interface, only pulled in for a CUDA-enabled
-    # build) -- so native/ itself must be on the include path, scoped to
-    # this target only, not the default CPU-only build.
-    target_include_directories(scl_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_sources(scl_core PRIVATE
+      backends/cuda/lj_pairwise_cuda.cu
+      backends/cuda/fourier_cuda.cu
+    )
     target_compile_definitions(scl_core PUBLIC SCL_WITH_CUDA)
     set_target_properties(scl_core PROPERTIES
       CUDA_STANDARD 17
       CUDA_SEPARABLE_COMPILATION ON
       CUDA_ARCHITECTURES "${SCL_CUDA_ARCHITECTURES}")
     find_package(CUDAToolkit REQUIRED)
-    target_link_libraries(scl_core PUBLIC CUDA::cudart)
+    # cuFFT backs fourier_transform_1d's CUDA path -- an established
+    # vendor primitive rather than a hand-written GPU FFT.
+    target_link_libraries(scl_core PUBLIC CUDA::cudart CUDA::cufft)
   else()
     message(WARNING "SCL_WITH_CUDA=ON but no CUDA compiler was found; building CPU-only")
   endif()

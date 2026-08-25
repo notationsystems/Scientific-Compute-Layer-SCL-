@@ -12,8 +12,8 @@ import pathlib
 import struct
 import subprocess
 import time
-from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple
+from dataclasses import dataclass, field
+from typing import List, Mapping, Optional, Sequence, Tuple
 
 from .errors import (
     SCLBackendUnavailableError,
@@ -138,7 +138,16 @@ class SCLResult:
     detail: Optional[str]
     wall_clock_seconds: float
     native_compute_seconds: Optional[float]
+    #: LJ-specific convenience, retained for existing callers. Operations
+    #: with no notion of particles simply leave it None -- read `metrics`
+    #: instead, which carries whatever the operation actually measured.
     n_particles: Optional[int]
+    #: Every metric the native operation emitted, verbatim and
+    #: operation-agnostic (`native_compute_seconds` plus whatever else that
+    #: operation measures -- `n_particles` for LJ, `n_samples`/
+    #: `transform_size` for fourier_transform_1d). The generic channel;
+    #: the two fields above are conveniences derived from it.
+    metrics: Mapping[str, float] = field(default_factory=dict)
 
 
 def raise_for_result(result: SCLResult) -> None:
@@ -240,6 +249,7 @@ def run_scl_request(
             wall_clock_seconds=wall_clock_seconds,
             native_compute_seconds=metrics.get("native_compute_seconds"),
             n_particles=metrics.get("n_particles"),
+            metrics=dict(metrics),
         )
 
     output_hex = response.get("output_hex")
@@ -270,4 +280,5 @@ def run_scl_request(
         wall_clock_seconds=wall_clock_seconds,
         native_compute_seconds=metrics.get("native_compute_seconds"),
         n_particles=metrics.get("n_particles"),
+        metrics=dict(metrics),
     )

@@ -2,14 +2,16 @@
 //
 // Reads one JSON request from stdin, runs one computation, writes one
 // JSON response to stdout, exits. See docs/SCL_CONTRACT.md for the full
-// wire format. This file owns ONLY protocol marshaling (JSON <-> the
-// pure LJParameters/Vec3 types) and fault mapping; the actual physics
-// lives in lj_pairwise.cpp/backend.cpp and is unit-tested independently
-// of this process boundary (native/tests/).
+// wire format. This file owns ONLY the operation-agnostic boundary:
+// envelope parsing, hex framing, backend selection and its
+// availability/fault ordering, and the response shape. Each operation
+// owns its own configuration/input decoding, validation, backend
+// dispatch, output encoding and metrics behind `scl::Operation`
+// (scl/operation.hpp) -- so adding an operation touches a registry row
+// and one op_*.cpp, never this file.
 
 #include <nlohmann/json.hpp>
 
-#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -19,7 +21,7 @@
 #include <vector>
 
 #include "scl/backend.hpp"
-#include "scl/lj_pairwise.hpp"
+#include "scl/operation.hpp"
 #include "scl/protocol.hpp"
 #include "scl/version.hpp"
 
@@ -30,10 +32,6 @@ namespace {
 class ProtocolError : public std::runtime_error {
 public:
     explicit ProtocolError(const std::string& what) : std::runtime_error(what) {}
-};
-class ValidationError : public std::runtime_error {
-public:
-    explicit ValidationError(const std::string& what) : std::runtime_error(what) {}
 };
 
 std::string to_hex(const std::vector<uint8_t>& bytes) {
@@ -65,64 +63,12 @@ std::vector<uint8_t> from_hex(const std::string& hex) {
     return out;
 }
 
-double read_double_le(const std::vector<uint8_t>& bytes, std::size_t offset) {
-    // x86_64 is little-endian with IEEE-754 doubles, matching Python's
-    // struct.pack("<d", ...) byte-for-byte -- a documented environment
-    // assumption (docs/SCL_CONTRACT.md), not a portable deserializer.
-    double value;
-    std::memcpy(&value, bytes.data() + offset, sizeof(double));
-    return value;
-}
-
-void write_double_le(std::vector<uint8_t>& out, double value) {
-    uint8_t buf[sizeof(double)];
-    std::memcpy(buf, &value, sizeof(double));
-    out.insert(out.end(), buf, buf + sizeof(double));
-}
-
-scl::LJParameters decode_configuration(const std::vector<uint8_t>& bytes) {
-    if (bytes.size() != 24) {
-        std::ostringstream os;
-        os << "configuration must be exactly 24 bytes (3 little-endian float64: "
-           << "epsilon, sigma, cutoff), got " << bytes.size();
-        throw ValidationError(os.str());
+json metrics_to_json(const std::vector<scl::Metric>& metrics) {
+    json out = json::object();
+    for (const scl::Metric& metric : metrics) {
+        out[metric.name] = metric.value;
     }
-    scl::LJParameters params;
-    params.epsilon = read_double_le(bytes, 0);
-    params.sigma = read_double_le(bytes, 8);
-    params.cutoff = read_double_le(bytes, 16);
-    return params;
-}
-
-std::vector<scl::Vec3> decode_positions(const std::vector<uint8_t>& bytes) {
-    if (bytes.size() % 24 != 0) {
-        std::ostringstream os;
-        os << "input must be a whole number of 24-byte particles (3 little-endian "
-           << "float64 each: x, y, z), got " << bytes.size() << " bytes";
-        throw ValidationError(os.str());
-    }
-    std::vector<scl::Vec3> positions;
-    positions.reserve(bytes.size() / 24);
-    for (std::size_t offset = 0; offset < bytes.size(); offset += 24) {
-        scl::Vec3 p;
-        p.x = read_double_le(bytes, offset);
-        p.y = read_double_le(bytes, offset + 8);
-        p.z = read_double_le(bytes, offset + 16);
-        positions.push_back(p);
-    }
-    return positions;
-}
-
-std::string encode_output(double total_energy, const std::vector<scl::Vec3>& forces) {
-    std::vector<uint8_t> out;
-    out.reserve(8 + forces.size() * 24);
-    write_double_le(out, total_energy);
-    for (const auto& f : forces) {
-        write_double_le(out, f.x);
-        write_double_le(out, f.y);
-        write_double_le(out, f.z);
-    }
-    return to_hex(out);
+    return out;
 }
 
 json make_response(const std::string& status, int exit_code, const std::string& backend_used,
@@ -187,15 +133,26 @@ int run(std::istream& in, std::ostream& out) {
         return scl::kProcessExitOk;
     }
 
-    if (operation != "lj_pairwise_energy_forces") {
-        out << make_response("halted", scl::kFaultProtocol, backend_field, std::nullopt,
-                              "unknown operation '" + operation +
-                                  "' (this build supports 'lj_pairwise_energy_forces' only)",
+    const scl::Operation* selected = scl::find_operation(operation);
+    if (selected == nullptr) {
+        std::ostringstream os;
+        os << "unknown operation '" << operation << "' (this build supports";
+        const std::vector<std::string> names = scl::supported_operation_names();
+        for (std::size_t i = 0; i < names.size(); ++i) {
+            os << (i == 0 ? " '" : ", '") << names[i] << "'";
+        }
+        os << ")";
+        out << make_response("halted", scl::kFaultProtocol, backend_field, std::nullopt, os.str(),
                               json::object())
             << "\n";
         return scl::kProcessExitOk;
     }
 
+    // Backend availability is deliberately checked BEFORE the operation
+    // decodes anything: a request for a backend this build/host cannot run
+    // is answered as BACKEND_UNAVAILABLE even when it is ALSO malformed
+    // (locked by tests/test_cpu_cuda_equivalence.py). Single source of
+    // truth for the reason text, shared with BackendUnavailableError.
     std::string unavailable_reason = scl::backend_unavailable_reason(backend);
     if (!unavailable_reason.empty()) {
         out << make_response("halted", scl::kFaultBackendUnavailable, backend_field, std::nullopt,
@@ -205,43 +162,23 @@ int run(std::istream& in, std::ostream& out) {
     }
 
     try {
-        std::vector<uint8_t> configuration_bytes = from_hex(request["configuration_hex"].get<std::string>());
-        std::vector<uint8_t> input_bytes = from_hex(request["input_hex"].get<std::string>());
+        scl::OperationRequest op_request;
+        op_request.backend = backend;
+        op_request.configuration = from_hex(request["configuration_hex"].get<std::string>());
+        op_request.input = from_hex(request["input_hex"].get<std::string>());
 
-        scl::LJParameters params = decode_configuration(configuration_bytes);
-        std::vector<scl::Vec3> positions = decode_positions(input_bytes);
+        scl::OperationOutcome outcome = selected->run(op_request);
 
-        std::string reason = scl::validate_lj_input(positions, params);
-        if (!reason.empty()) {
-            out << make_response("halted", scl::kFaultValidation, backend_field, std::nullopt,
-                                  reason, json::object())
-                << "\n";
-            return scl::kProcessExitOk;
+        std::optional<std::string> output_hex;
+        if (outcome.has_output) {
+            output_hex = to_hex(outcome.output);
         }
-
-        auto compute_start = std::chrono::steady_clock::now();
-        scl::LJResult result = scl::compute_lj_pairwise(backend, positions, params);
-        auto compute_end = std::chrono::steady_clock::now();
-        double compute_seconds =
-            std::chrono::duration<double>(compute_end - compute_start).count();
-
-        json metrics;
-        metrics["native_compute_seconds"] = compute_seconds;
-        metrics["n_particles"] = positions.size();
-
-        if (!result.ok) {
-            std::string detail = (result.fault == scl::ComputeFault::CoincidentParticles)
-                                      ? "two particles at zero separation: the potential is singular"
-                                      : "energy or force evaluated to a non-finite value";
-            out << make_response("halted", scl::kFaultComputation, backend_field, std::nullopt,
-                                  detail, metrics)
-                << "\n";
-            return scl::kProcessExitOk;
+        std::optional<std::string> detail;
+        if (!outcome.detail.empty()) {
+            detail = outcome.detail;
         }
-
-        std::string output_hex = encode_output(result.total_energy, result.forces);
-        out << make_response("completed", scl::kFaultNone, backend_field, output_hex, std::nullopt,
-                              metrics)
+        out << make_response(outcome.status, outcome.exit_code, backend_field, output_hex, detail,
+                              metrics_to_json(outcome.metrics))
             << "\n";
         return scl::kProcessExitOk;
     } catch (const ProtocolError& e) {
@@ -249,7 +186,7 @@ int run(std::istream& in, std::ostream& out) {
                               json::object())
             << "\n";
         return scl::kProcessExitOk;
-    } catch (const ValidationError& e) {
+    } catch (const scl::OperationValidationError& e) {
         out << make_response("halted", scl::kFaultValidation, backend_field, std::nullopt, e.what(),
                               json::object())
             << "\n";
