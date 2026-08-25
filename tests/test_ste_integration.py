@@ -144,14 +144,28 @@ def test_geometry_change_changes_input_and_computation_identity(cli_path):
 def test_interpret_result_is_the_evidence_firewall(cli_path):
     """Phase 112b's EXECUTION IDENTITY != EVIDENCE IDENTITY firewall
     (execution/dispatcher.py's module docstring): interpret_lj_result's
-    semantic content must carry ONLY the computed value, never
-    specification/occurrence/computation-identity bookkeeping."""
+    semantic content must carry ONLY the computed value/meaning -- now
+    richer (Phase 2: evidence class, typed quantities, method block) but
+    still never specification/occurrence/computation-identity
+    bookkeeping, which must ride only in record_raw_content instead."""
+    ste = _import_ste()
     from scl.ste_adapter import build_lj_specification, interpret_lj_result, run_scl_specification
+
+    referent = ste["make_referent"](natural_key="argon-like-pair-cell", kind="formulation")
+    candidate = ste["make_action_candidate"](
+        action_class="scl_lj_pairwise_energy_forces",
+        requirement_ids=("scl-phase1-smoke-requirement",),
+        formulation=referent, property="interaction_energy", role="target", target_context={},
+    )
 
     spec = build_lj_specification(1.0, 1.0, 5.0, [(0, 0, 0), (1.5, 0, 0)], cli_path=cli_path)
     result = run_scl_specification(spec, cli_path=cli_path)
-    content = interpret_lj_result(result)
-    assert set(content.keys()) == {"total_energy_reduced_units", "forces_reduced_units"}
+    content = interpret_lj_result(candidate, result)
+    assert set(content.keys()) == {
+        "property", "value", "evidence_class", "quantities", "method_block", "parameters",
+    }
+    assert content["evidence_class"] == "computed"
+    assert isinstance(content["value"], float)
     serialized_keys = str(content.keys())
     for forbidden in ("computation", "specification", "occurrence", "program_identity"):
         assert forbidden not in serialized_keys
@@ -179,8 +193,8 @@ def test_scl_is_substitutable_at_the_real_specification_dispatcher_seam(cli_path
     def spec_for(_candidate):
         return build_lj_specification(1.0, 1.0, 5.0, [(0.0, 0.0, 0.0), (1.4, 0.0, 0.0)], cli_path=cli_path)
 
-    def interpret(_candidate, result):
-        return interpret_lj_result(result)
+    def interpret(dispatched_candidate, result):
+        return interpret_lj_result(dispatched_candidate, result)
 
     dispatcher = ste["SpecificationDispatcher"](
         spec_for=spec_for,
@@ -190,7 +204,8 @@ def test_scl_is_substitutable_at_the_real_specification_dispatcher_seam(cli_path
     )
 
     measurement = dispatcher.dispatch(candidate)
-    assert "total_energy_reduced_units" in measurement.content
+    assert "value" in measurement.content
+    assert measurement.content["evidence_class"] == "computed"
     assert measurement.record_locator.startswith("execution:")
     assert "computation " in measurement.record_raw_content
     assert measurement.extraction_method == "simulation:deterministic_native_execution"

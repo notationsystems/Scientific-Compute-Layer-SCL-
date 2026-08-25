@@ -47,6 +47,7 @@ from execution.specification import ExecutionSpecification
 
 from .client import (
     SCLRequest,
+    decode_lj_configuration,
     decode_lj_output,
     default_cli_path,
     encode_lj_configuration,
@@ -54,6 +55,8 @@ from .client import (
     run_scl_request,
 )
 from .errors import SCLProtocolError, SCLTimeoutError
+from .method_block import lj_method_block_for
+from .quantity import Quantity, absent_uncertainty
 
 SCL_DESCRIPTOR_HEADER = b"ste.scl.lj-pairwise-energy-forces.v1"
 _BACKEND_MARKER = b"\n[backend]\n"
@@ -99,6 +102,17 @@ def _split_descriptor(program: bytes) -> str:
     if not head.startswith(SCL_DESCRIPTOR_HEADER) or not marker:
         raise EngineProtocolError("not an SCL lj-pairwise-energy-forces program descriptor")
     return backend.decode("utf-8")
+
+
+def _split_descriptor_full(program: bytes) -> tuple:
+    """Like _split_descriptor, but also recovers the kernel version line
+    -- needed to populate LJMethodBlock.potential_version from a real
+    ExecutionSpecification.program without re-querying the CLI."""
+    head, marker, backend = program.partition(_BACKEND_MARKER)
+    if not head.startswith(SCL_DESCRIPTOR_HEADER) or not marker:
+        raise EngineProtocolError("not an SCL lj-pairwise-energy-forces program descriptor")
+    version_line = head[len(SCL_DESCRIPTOR_HEADER) + 1 :].decode("utf-8")  # +1 for the b"\n" separator
+    return version_line, backend.decode("utf-8")
 
 
 def build_lj_specification(
@@ -193,7 +207,17 @@ def run_scl_specification(
     )
 
 
-def interpret_lj_result(result: ExecutionResult) -> dict:
+#: Per the Phase 2 addendum's vocabulary_map (`docs/PHASE2_AUDIT.md` §5):
+#: a direct numerical evaluation of a model potential is "simulated",
+#: which maps onto the canonical ingest class "computed" -- never
+#: "measured" (nothing physical was observed) and never "asserted"
+#: (nothing was merely stated). This constant is SCL's own declaration of
+#: which class its own output belongs to; it is NOT read from, or written
+#: into, any STE schema (none exists yet -- see docs/PHASE2_AUDIT.md §2).
+LJ_EVIDENCE_CLASS = "computed"
+
+
+def interpret_lj_result(candidate, result: ExecutionResult) -> dict:
     """Turn a completed SCL ExecutionResult's raw `output` bytes into
     semantic content -- the firewall STE's dispatcher seam requires
     (Phase 112b, execution/dispatcher.py's module docstring):
@@ -204,8 +228,75 @@ def interpret_lj_result(result: ExecutionResult) -> dict:
     specification/occurrence/computation-identity bookkeeping stays out
     of the semantic content and rides only in the dispatcher's
     `record_raw_content` instead, exactly as it does for the Rust engine
-    and for GROMACS."""
+    and for GROMACS.
+
+    Phase 2 conformance additions on top of Phase 1's bare
+    {total_energy, forces} content (docs/PHASE2_AUDIT.md has the full
+    rationale for each key added here):
+
+    - `property`: `candidate.property`, verbatim. Required because
+      `materials.results.make_experimental_result()` (the sole semantic
+      write boundary into EvidencePool) raises ValueError unless
+      `content["property"] == entry.property` -- confirmed by reading
+      that function directly (materials/results.py) and by this
+      adapter's own tests actually hitting that ValueError before this
+      field was added. This is the one place `candidate` is genuinely
+      read, not merely accepted for signature compatibility.
+    - `value`: a plain float duplicate of total_energy. Required because
+      `materials.model_state.update()` (the real, only production path
+      from an admitted Observation into derived state) asserts
+      `isinstance(observation.content.get("value"), (int, float))` --
+      confirmed by reading that function directly, not assumed. Without
+      this key, an SCL result could never actually complete the real
+      state-transition path, no matter how well-classed the rest of its
+      content was.
+    - `evidence_class`: SCL's own declared classification of this
+      content (see LJ_EVIDENCE_CLASS above).
+    - `quantities`: total_energy and each force, as `Quantity` dicts
+      (value/unit/uncertainty/uncertainty_kind) -- see quantity.py.
+      `uncertainty_kind="absent"` here is a true statement about this
+      deterministic double-precision computation, not a filled-in
+      default.
+    - `method_block`: the LJMethodBlock for this computation (see
+      method_block.py), decoded from `result.specification` itself so it
+      is never out of sync with what was actually run.
+
+    `candidate` is accepted (unused beyond validation) to match
+    `SpecificationDispatcher`'s `interpret: Callable[[ActionCandidate,
+    ExecutionResult], Mapping[str, object]]` signature exactly; SCL does
+    not read any identity/formulation field from it -- substance/
+    formulation identity remains entirely the caller's responsibility
+    (docs/PHASE2_AUDIT.md's Task 16 finding: SCL's content never
+    contains a formulation/substance reference of its own)."""
     if result.status != "completed" or result.output is None:
         raise ValueError("interpret_lj_result requires a completed result with output")
+
     total_energy, forces = decode_lj_output(result.output)
-    return {"total_energy_reduced_units": total_energy, "forces_reduced_units": forces}
+    epsilon, sigma, cutoff = decode_lj_configuration(result.specification.configuration)
+    version_line, backend = _split_descriptor_full(result.specification.program)
+    n_particles = len(result.specification.input_payload) // 24
+
+    energy_quantity = absent_uncertainty(total_energy, unit="epsilon")
+    force_quantities = [
+        {
+            "fx": absent_uncertainty(fx, unit="epsilon_per_sigma").to_dict(),
+            "fy": absent_uncertainty(fy, unit="epsilon_per_sigma").to_dict(),
+            "fz": absent_uncertainty(fz, unit="epsilon_per_sigma").to_dict(),
+        }
+        for (fx, fy, fz) in forces
+    ]
+    method_block = lj_method_block_for(
+        cutoff=cutoff, n_particles=n_particles, backend=backend, kernel_version=version_line
+    )
+
+    return {
+        "property": candidate.property,
+        "value": total_energy,
+        "evidence_class": LJ_EVIDENCE_CLASS,
+        "quantities": {
+            "total_energy": energy_quantity.to_dict(),
+            "forces": force_quantities,
+        },
+        "method_block": method_block.to_dict(),
+        "parameters": {"epsilon": epsilon, "sigma": sigma},
+    }

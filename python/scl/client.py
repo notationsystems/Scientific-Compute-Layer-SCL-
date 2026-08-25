@@ -68,6 +68,13 @@ def encode_lj_positions(positions: Sequence[Tuple[float, float, float]]) -> byte
     return out
 
 
+def decode_lj_configuration(parameters: bytes) -> Tuple[float, float, float]:
+    """Inverse of encode_lj_configuration: (epsilon, sigma, cutoff)."""
+    if len(parameters) != 24:
+        raise SCLProtocolError(f"malformed lj_pairwise_energy_forces configuration: {len(parameters)} bytes")
+    return struct.unpack("<ddd", parameters)
+
+
 def decode_lj_output(output: bytes) -> Tuple[float, List[Tuple[float, float, float]]]:
     """Inverse of native/src/main.cpp::encode_output: 8 bytes total energy
     followed by N * 24 bytes of (fx, fy, fz)."""
