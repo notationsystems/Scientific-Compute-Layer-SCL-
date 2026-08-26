@@ -126,6 +126,63 @@ def test_the_fixture_pins_the_trap_class_itself():
     assert reparsed == traps
 
 
+# --- the COLLECTION half of the same class ------------------------------
+
+COLLECTION_SHAPES = [
+    ({"k": []}, "empty sequence value"),
+    ({"k": {}}, "empty map value"),
+    ({"k": {"inner": []}}, "nested empty sequence"),
+    ({"k": {"inner": {}}}, "nested empty map"),
+    ({"k": [{}, {"a": 1}]}, "empty map INSIDE a sequence"),
+    ({"k": [1, 2, 3]}, "sequence of scalars"),
+    ({"k": [{"a": 1}, {"b": 2}]}, "sequence of maps"),
+    ({"k": [{"row": [1, 2]}, {"row": [3]}]}, "wrapped inner sequence"),
+]
+
+
+@pytest.mark.parametrize("document,label", COLLECTION_SHAPES,
+                         ids=[label for _, label in COLLECTION_SHAPES])
+def test_every_collection_shape_round_trips(document, label):
+    """The always-quote fix closed the SCALAR half of "two encodings, one
+    meaning". Nothing held the collection half, and the fixture pinned no
+    collection shapes at all until these were added.
+
+    `empty map INSIDE a sequence` previously made the emitter RAISE
+    "unsupported scalar type" -- it could not represent a legal document
+    shape. Loud rather than silent, so never a wrong answer, but a hole."""
+    assert yaml.safe_load(cy.canonical_dump(document)) == document
+
+
+def test_a_sequence_inside_a_sequence_is_refused_at_the_writer():
+    """MEASURED cross-parser divergence, closed the same way the scalar
+    class was. The block form `- - 1` is legal YAML that PyYAML reads and
+    the acquisition repository's dependency-free reader REFUSES. One side
+    able to read an artifact the other cannot is the same failure as two
+    sides typing a scalar differently.
+
+    Refused at the WRITER rather than tolerated -- a reader that copes is
+    not a fix, it relocates the ambiguity (section 6.2)."""
+    with pytest.raises(TypeError, match="sequence directly inside a sequence"):
+        cy.canonical_dump({"k": [[1, 2], [3]]})
+    with pytest.raises(TypeError, match="sequence directly inside a sequence"):
+        cy.canonical_dump({"k": [[], 1]})
+
+    # the documented alternative works, and is better practice anyway:
+    # a bare nested sequence gives its elements no name
+    wrapped = {"k": [{"row": [1, 2]}, {"row": [3]}]}
+    assert yaml.safe_load(cy.canonical_dump(wrapped)) == wrapped
+
+
+def test_the_fixture_pins_collection_shapes_too():
+    """The agreement fixture is what the two repositories compare. If it
+    pins only scalars, only scalars are agreed."""
+    shapes = cy.FIXTURE["collection_shapes"]
+    assert {"empty_map_in_a_sequence", "empty_map_value", "empty_sequence_value",
+            "nested_empty_map", "nested_empty_sequence", "sequence_of_maps",
+            "sequence_of_scalars", "wrapped_inner_sequence"} <= set(shapes)
+    assert yaml.safe_load(cy.canonical_dump(cy.FIXTURE))["collection_shapes"] == shapes
+
+
 def test_non_finite_floats_are_refused():
     for bad in (float("nan"), float("inf"), float("-inf")):
         with pytest.raises(ValueError):

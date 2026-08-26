@@ -11,6 +11,9 @@ traceability guarantee fails.
     floats:        shortest round-trip repr; no padded zeros; exponent only
                    when |x| < 1e-4 or |x| >= 1e16
     strings:       ALWAYS double-quoted, values and keys alike
+    collections:   block style; an empty mapping or sequence is `{}` / `[]`
+                   in any position. A sequence directly inside a sequence
+                   is REFUSED -- see the note below.
     encoding:      UTF-8, LF line endings, single trailing newline
     hash:          sha256 over the serialized bytes
     reference:     "sha256:<hex>"
@@ -42,6 +45,24 @@ deliberately EMITTER-SIDE: a reader-side normalization would make the
 artifact's meaning depend on which reader opened it, which is the defect
 restated rather than fixed. See architecture/canonicalization_defect.yaml
 in the acquisition repository for the full measurement.
+
+WHY A SEQUENCE INSIDE A SEQUENCE IS REFUSED. The always-quote rule closed
+the SCALAR half of the "two encodings, one meaning" class. The COLLECTION
+half was measured afterwards and had two holes, both loud rather than
+silent, and neither reached by any live artifact at the time:
+
+  * an empty mapping or sequence nested INSIDE a sequence raised
+    "unsupported scalar type" -- the emitter could not represent a legal
+    document shape. Fixed: it emits `- {}` / `- []`.
+  * a sequence directly inside a sequence emits the block form `- - 1`,
+    which PyYAML reads correctly and this project's dependency-free reader
+    REFUSES with YamlSubsetError. One repository able to read an artifact
+    the other cannot is the same failure as two repositories typing a
+    scalar differently, so it is closed the same way: refuse the form at
+    the WRITER rather than tolerating a shape that does not round-trip
+    everywhere. Wrap the inner sequence in a mapping with a named key --
+    which is better practice anyway, since a bare nested sequence gives
+    its elements no name.
 
 ONE DOCUMENTED EXCEPTION to "block style only": an empty mapping or
 sequence has no block form in YAML, so `{}` / `[]` are emitted. Prefer
@@ -142,11 +163,31 @@ def _emit(value: Any, indent: int, lines: List[str]) -> None:
             lines[-1] += " []"
             return
         for item in value:
-            if isinstance(item, (Mapping, list, tuple)) and item:
+            if isinstance(item, (list, tuple)):
+                # A SEQUENCE DIRECTLY INSIDE A SEQUENCE IS REFUSED, not
+                # emitted. The block form `- - 1` is legal YAML that PyYAML
+                # reads and this project's own dependency-free reader
+                # REFUSES -- measured, both parsers, both repositories. One
+                # side reading an artifact the other cannot is the same
+                # class as two sides typing a scalar differently, so it is
+                # closed the same way: canonical at the writer, refuse the
+                # form that does not round-trip everywhere.
+                raise TypeError(
+                    "a sequence directly inside a sequence is not canonically "
+                    "representable: the block form round-trips through PyYAML and is "
+                    "refused by the dependency-free reader. Wrap the inner sequence in "
+                    "a mapping with a named key.")
+            if isinstance(item, Mapping) and item:
                 lines.append(f"{pad}-")
                 _emit(item, indent + 1, lines)
                 # collapse "-\n  key:" into "- key:" for the common case
                 _collapse_dash(lines, indent)
+            elif isinstance(item, Mapping):
+                # An EMPTY mapping inside a sequence. Previously this fell
+                # through to _format_scalar and raised "unsupported scalar
+                # type" -- the emitter could not represent a legal document
+                # shape at all. Loud, so never silent, but a hole.
+                lines.append(f"{pad}- {{}}")
             else:
                 lines.append(f"{pad}- {_format_scalar(item)}")
     else:
@@ -235,6 +276,21 @@ FIXTURE = {
         "word_null": "null",
         "word_true": "True",
         "word_yes": "yes",
+    },
+    #: COLLECTION shapes, pinned for the same reason the trap scalars are.
+    #: The always-quote fix closed the scalar half of the class; nothing
+    #: held the collection half, and the fixture pinned no collection
+    #: shapes at all until these were added. Two of these previously made
+    #: the emitter RAISE.
+    "collection_shapes": {
+        "empty_map_in_a_sequence": [{}, {"a": 1}],
+        "empty_map_value": {},
+        "empty_sequence_value": [],
+        "nested_empty_map": {"inner": {}},
+        "nested_empty_sequence": {"inner": []},
+        "sequence_of_maps": [{"k": 1}, {"k": 2}],
+        "sequence_of_scalars": [1, 2, 3],
+        "wrapped_inner_sequence": [{"row": [1, 2]}, {"row": [3]}],
     },
     "zzz_key_sorting_proof": "sorted last",
 }

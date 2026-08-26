@@ -105,6 +105,56 @@ MUTATIONS = [
 CLAUSES_WITHOUT_A_DEDICATED_TEST = {}
 
 
+def _strip_cxx_comments(text: str) -> str:
+    """Remove // and /* */ comments without touching string literals."""
+    out, i, n = [], 0, len(text)
+    while i < n:
+        c = text[i]
+        if c in "\"'":
+            quote, start = c, i
+            i += 1
+            while i < n and text[i] != quote:
+                i += 2 if text[i] == "\\" else 1
+            i += 1
+            out.append(text[start:i])
+        elif text.startswith("//", i):
+            i = text.find("\n", i)
+            i = n if i == -1 else i
+        elif text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            i = n if end == -1 else end + 2
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
+def reaches_executable_semantics(relative: str, before: str, after: str) -> bool:
+    """Did the mutation change what the program DOES, or only how it reads?
+
+    THE HARNESS CAUGHT ITS OPERATOR ONCE, AND THIS IS WHY IT EXISTS. A
+    clause-3 mutation that only added a comment was applied, compiled, and
+    reported SURVIVED -- as though a test had failed to catch a real
+    change. It had not: there was no change to catch. The harness verified
+    that a mutation was APPLIED, not that it altered behaviour. Those are
+    different questions and only one of them is about the test.
+
+    Same shape as grepping for a failure string instead of asking the
+    remote for state, and as asserting absence-of-violation instead of
+    emptiness -- one level up, aimed at a PROOF rather than at code.
+
+    So a diff that cannot reach execution is MALFORMED: a broken mutation,
+    reported as such, and counted neither as caught nor as surviving."""
+    if relative.endswith(".py"):
+        import ast
+        try:
+            return ast.dump(ast.parse(before)) != ast.dump(ast.parse(after))
+        except SyntaxError:
+            return True          # a mutation that will not parse is a real change
+    return (" ".join(_strip_cxx_comments(before).split())
+            != " ".join(_strip_cxx_comments(after).split()))
+
+
 def _restore(source: pathlib.Path, target: pathlib.Path) -> None:
     """Restore WITHOUT preserving mtime, then bump it.
 
@@ -157,7 +207,14 @@ def main() -> int:
                 verdicts.append((clause, "PATCH-STALE", description))
                 print(f"clause {clause:>2}: PATCH STALE -- anchor not found in {relative}")
                 continue
-            path.write_text(source.replace(old, new, 1))
+            mutated = source.replace(old, new, 1)
+            if not reaches_executable_semantics(relative, source, mutated):
+                verdicts.append((clause, "MALFORMED", description))
+                print(f"clause {clause:>2}: MALFORMED MUTATION -- the diff does not reach "
+                      "executable semantics (comment or whitespace only), so nothing was "
+                      "tested. A broken mutation, NOT a surviving one.")
+                continue
+            path.write_text(mutated)
 
             if not rebuild():
                 # a mutation that will not compile proves nothing about the
@@ -185,6 +242,8 @@ def main() -> int:
         shutil.rmtree(backup, ignore_errors=True)
 
     print("\n" + "=" * 70)
+    if [v for v in verdicts if v[1] == "MALFORMED"]:
+        print("\nMALFORMED mutations tested nothing and are counted neither way.")
     caught = [v for v in verdicts if v[1] == "CAUGHT"]
     print(f"{len(caught)}/{len(MUTATIONS)} mutations caught by the claiming test")
     for clause, verdict, description in verdicts:

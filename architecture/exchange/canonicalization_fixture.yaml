@@ -1,6 +1,29 @@
 "booleans":
   "no": false
   "yes": true
+"collection_shapes":
+  "empty_map_in_a_sequence":
+    - {}
+    - "a": 1
+  "empty_map_value": {}
+  "empty_sequence_value": []
+  "nested_empty_map":
+    "inner": {}
+  "nested_empty_sequence":
+    "inner": []
+  "sequence_of_maps":
+    - "k": 1
+    - "k": 2
+  "sequence_of_scalars":
+    - 1
+    - 2
+    - 3
+  "wrapped_inner_sequence":
+    - "row":
+        - 1
+        - 2
+    - "row":
+        - 3
 "empty_map_exception": {}
 "empty_seq_exception": []
 "floats":
