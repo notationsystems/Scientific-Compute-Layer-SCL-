@@ -276,6 +276,56 @@ when their annotating fields agree, not merely when their
 `computation_identity` agree. Written down now so it is a known edge
 rather than a discovery.
 
+### 6.2 One meaning, one encoding
+
+Section 6.1 asks which parameters *participate*. This asks a prior
+question: whether a parameter has one encoding at all.
+
+**The rule.** Wherever a presence flag, a discriminant, or a reserved word
+guards a payload, the guarded bytes must have **exactly one encoding for
+each meaning**. A payload the guard renders unused must be *refused* when
+it carries a value — never accepted and ignored.
+
+**Why it is an identity rule and not a tidiness rule.** Two
+byte-different configurations that mean the same thing produce different
+`parameters_identity` values. That destroys the premise the whole identity
+model rests on — that a parameter identity identifies the parameters — and
+it does so silently, because both requests compute correctly.
+
+**It was live in shipped, validated code.** `fourier_transform_1d`
+accepted arbitrary bytes in `sample_spacing_seconds` whenever
+`has_sample_spacing` was 0, and ignored them. So `no spacing` had 2^64
+encodings. The operation had passed its full contract suite, its analytic
+validation, and its identity tests; the defect was found by a mutation
+check written for a *different* clause. That is worth recording as a fact
+about coverage: a suite that passes completely can still leave a class
+entirely unprobed.
+
+**Third instance of one failure class.** "Two encodings, one meaning,
+different digests" has now appeared at three layers:
+
+| layer | the two encodings | what disagreed |
+|---|---|---|
+| exchange serializer | bare vs quoted YAML scalar | two parsers on the *type* |
+| operation configuration | ignored payload behind a clear flag | two byte strings on `parameters_identity` |
+| evidence content | absent vs sentinel vs omitted | absence with several spellings |
+
+All three are closed by the same move, and it is worth stating as the
+general repair: **make the encoding canonical at the WRITER, and refuse
+the ambiguous form rather than tolerating it.** A reader that normalizes
+is not a fix — it relocates the ambiguity to whoever opens the artifact.
+
+**Where it reaches next.** Any optional field, any union behind a kind
+discriminant, any reserved word — and, one layer up, any representation of
+*missing*. Absence is the same shape: if `missing` can be spelled as
+`null`, as NaN, as an omitted key, or as a sentinel value, then one
+meaning has four encodings and the identity of a record depends on which
+was chosen.
+
+Enforced by clause 2 of the operation contract
+(`native/include/scl/operation.hpp`), checked for every registered
+operation by `tests/test_operation_registry_contract.py`.
+
 ## 7. Reproducibility — precisely scoped (Task 5)
 
 | Kind | Claimed? | Evidence |

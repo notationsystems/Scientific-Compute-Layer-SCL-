@@ -39,15 +39,40 @@
 //     can see which one ran without it changing the operation's identity.
 //
 //  2. CONFIGURATION DECODER. Fixed, documented byte layout. Rejects any
-//     length but its own. Every field is validated, including reserved
-//     fields, which must be zero so the layout can grow compatibly.
-//     CANONICAL ENCODING: a field that is unused under some other
-//     field's setting must be REFUSED when it carries a value, not
-//     silently ignored. Two byte-different configurations that mean the
-//     same thing would otherwise produce different parameters_identity
-//     values, which breaks the premise that a parameter identity
-//     identifies the parameters. fourier_transform_1d failed exactly this
-//     way until the clause-2 conformance check was written.
+//     length but its own. Every field is validated.
+//
+//     CANONICAL ENCODING -- stated over the SHAPE, not over one example,
+//     because the next operation should get it right by RULE rather than
+//     by imitating this one:
+//
+//         WHEREVER A PRESENCE FLAG, A DISCRIMINANT OR A RESERVED WORD
+//         GUARDS A PAYLOAD, THE GUARDED BYTES MUST HAVE EXACTLY ONE
+//         ENCODING FOR EACH MEANING. A payload that the guard renders
+//         unused MUST be refused when it carries a value -- never
+//         accepted and ignored.
+//
+//     This covers reserved fields (which must be zero), optional fields
+//     behind a has_* flag, and any future union behind a kind
+//     discriminant. The failure it prevents: two byte-different
+//     configurations that mean the SAME THING produce DIFFERENT
+//     parameters_identity values, which destroys the premise the identity
+//     model rests on -- that a parameter identity identifies the
+//     parameters.
+//
+//     fourier_transform_1d failed exactly this way, live, in a shipped
+//     and fully-validated operation: arbitrary bytes in
+//     sample_spacing_seconds were accepted and ignored whenever
+//     has_sample_spacing was 0. It was found by a mutation check written
+//     for a different clause, on an operation that had already passed
+//     everything it was asked.
+//
+//     SAME CLASS AS THE SERIALIZER DEFECT ONE LAYER DOWN. "Two encodings,
+//     one meaning, different digests" is also exactly what YAML implicit
+//     typing did to the exchange artifacts, where two conformant parsers
+//     agreed on bytes and disagreed on type. Both were closed by the same
+//     move: make the encoding canonical at the WRITER, and refuse the
+//     ambiguous form rather than tolerating it. See
+//     docs/SCL_CONTRACT.md section 6.2.
 //
 //  3. INPUT DECODER. Documented element size; rejects a payload that is
 //     not a whole number of elements. An empty input is a VALIDATION
