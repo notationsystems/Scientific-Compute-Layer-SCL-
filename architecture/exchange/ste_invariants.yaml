@@ -1,0 +1,182 @@
+"artifact": "ste_invariants"
+"authored_by": "daf"
+"extends": "core@1.0.0"
+"measured_at":
+  "modifiable": false
+  "referent_kind": "submodule_commit"
+  "submodule_commit": "3e5bea9"
+"owner": "ste"
+"reconstruction":
+  "I1":
+    "reconstruction": null
+    "recoverable": false
+    "why_not": "cited only inside the range `I1-I8`, never individually. The sentence carrying that range constrains the RANGE as a whole -- arrows point strictly downward/rightward from canonical state, and the only path back is the feedback loop through schema/validation -- so I1 is somewhere in that idea and nothing narrows it further."
+  "I2":
+    "reconstruction": null
+    "recoverable": false
+    "why_not": "same as I1: cited only inside the range, never individually."
+  "I3":
+    "cited_with":
+      - "I4"
+      - "I8"
+    "reconstruction": "validation is what produces canonical truth: a candidate delta becomes canonical state only by passing schema/validation, and representation metadata is never admitted into CanonicalState, Version or ProjectedState."
+    "recoverable": "partially"
+    "what_would_refute_it": "a citation of I3 on a statement about something other than admission-through-validation."
+  "I4":
+    "cited_with":
+      - "I3"
+    "reconstruction": "relationships are EXPLICIT ONLY. `CanonicalState.edges` carries `EdgeRecord`s that were stated, never inferred; inference is marked downstream in Morpho as `is_canonical`/`inference_status` rather than folded back into canonical state."
+    "recoverable": "partially"
+    "what_would_refute_it": "a citation of I4 on a non-edge, non-relationship statement."
+  "I5":
+    "citations": 6
+    "reconstruction": "IDENTITY IS THE FIELD NAME, NEVER THE VALUE. `Field.id == field_name` and equals its own dict key; `Entity.id` is unchanged by value changes; every downstream identity (geometry_id, visual_id, node_id, cell_id) is a function of that same string. In v1 the id does not change."
+    "recoverable": true
+    "what_would_refute_it": "nothing in the index: this is the one number cited enough times, in enough distinct statements, to be pinned rather than inferred."
+  "I6":
+    "cited_with":
+      - "I7"
+    "reconstruction": "determinism of projection, RELATIVE TO THE COMPILER: the same canonical version plus the same compiler_version yields the same projection. compiler_version is always present, and the spec says so explicitly -- 'this is what makes I6 checkable'."
+    "recoverable": true
+    "what_would_refute_it": "a citation of I6 on a statement not about reproducible projection."
+  "I7":
+    "cited_with":
+      - "I6"
+    "reconstruction": "byte-identity of the projection, the stronger form beside I6: same version in, byte-identical ProjectedState out, always. Cited only jointly with I6, so which half of that sentence is I6 and which is I7 is inference."
+    "recoverable": "partially"
+    "what_would_refute_it": "any individual citation of I7. There is none, which is why the split between I6 and I7 is the weakest reconstruction here that is offered at all."
+  "I8":
+    "cited_with":
+      - "I3"
+    "reconstruction": "representation stays in the renderer. THREE.* objects live in the renderer runtime only, and backend/layout configuration is not part of CanonicalState at all."
+    "recoverable": "partially"
+    "what_would_refute_it": "a citation of I8 on a statement about canonical state itself."
+"recoverability":
+  "fully":
+    - "I5"
+    - "I6"
+  "not_at_all":
+    - "I1"
+    - "I2"
+  "partially":
+    - "I3"
+    - "I4"
+    - "I7"
+    - "I8"
+  "the_honest_summary": "two of eight are pinned by their citations, four are inferred from joint citations and say what would refute them, and two cannot be recovered at all -- they are cited only inside a range. Nothing above is offered as STE's meaning; it is offered as the most the documents constrain."
+"reference_index":
+  "I3":
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 627
+      "text": "produces canonical truth (I3, I4)."
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 757
+      "text": "into `CanonicalState`, `Version`, or `ProjectedState` (I3, I8). `geometry_id`"
+  "I4":
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 170
+      "text": "edges: tuple[EdgeRecord, ...] = ()  # explicit only (I4); empty in v1"
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 627
+      "text": "produces canonical truth (I3, I4)."
+    - "document": "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+      "line": 55
+      "text": "| Relationship | `CanonicalState.edges` / `EdgeRecord` (explicit only, I4) → `MorphoRelation` (adds `is_canonical`/`inference_status`) | Solid, already proven (Phase 12's `\"precedes\"`/`\"relationships\""
+  "I5":
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 153
+      "text": "id: str            # == field_name; stable identity (I5)"
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 169
+      "text": "fields: Mapping[str, Field]   # key MUST equal Field.id (I5)"
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 524
+      "text": "v1 rule (brief I5, exact chain preserved, no transformation applied):"
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 761
+      "text": "`id` itself changes (which, per I5, doesn't happen in v1)."
+    - "document": "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+      "line": 51
+      "text": "| Identity | `Field.id` == its own dict key (I5) → `Entity.id` unchanged → `geometry_id`/`visual_id`/`node_id`/`cell_id` (all identity functions on the same string, `morpho/identity.py`) | Deliberate,"
+    - "document": "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+      "line": 165
+      "text": "or synthetic), which is a new invariant, not an extension of I5."
+    - "document": "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+      "line": 370
+      "text": "| Does F1 identity remain stable? | **Yes** | I5 already guarantees this — identity is the field name, never the value. |"
+    - "document": "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+      "line": 800
+      "text": "| Identity stability | 3 — needs a new nested-identity scheme | 5 — nothing changes | **5** — falls out of existing I5, shown in §H |"
+    - "document": "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+      "line": 829
+      "text": "| 6 | Unstable identities | No | §H shows every identity question resolves via existing I5, unchanged |"
+  "I6":
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 221
+      "text": "not part of identity — this is required for I6 (same canonical version +"
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 585
+      "text": "- `compiler_version` is always present — this is what makes I6 checkable:"
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 705
+      "text": "Same `version` in ⇒ byte-identical `ProjectedState` out, always (I6, I7)."
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 1052
+      "text": "satisfying I6/I7 underneath."
+  "I7":
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 705
+      "text": "Same `version` in ⇒ byte-identical `ProjectedState` out, always (I6, I7)."
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 1052
+      "text": "satisfying I6/I7 underneath."
+  "I8":
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 757
+      "text": "into `CanonicalState`, `Version`, or `ProjectedState` (I3, I8). `geometry_id`"
+    - "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 884
+      "text": "`renderer/index.html`'s in-memory runtime (I8)."
+    - "document": "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+      "line": 469
+      "text": "| Representation metadata (backend config, layout) | No, and never has been (`ThreeJSRenderConfig`/`DiagramLayoutConfig` are not part of `CanonicalState` at all) | **No** | This is I8/§12's extrinsic-"
+"status": "RECONSTRUCTION_NOT_DECLARATION"
+"the_cardinality_conflict":
+  "asserted_in_documents":
+    "10_invariants":
+      - "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+  "numbers_cited_individually":
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+  "numbers_covered_only_by_a_range":
+    - 1
+    - 2
+  "ranges_cited":
+    - "covers":
+        - "I1"
+        - "I2"
+        - "I3"
+        - "I4"
+        - "I5"
+        - "I6"
+        - "I7"
+        - "I8"
+      "document": "docs/ARCHITECTURE_SPEC.md"
+      "line": 71
+      "range": "I1-I8"
+      "text": "Invariants I1–I8 (see brief) hold at every arrow above: arrows point strictly"
+  "referenced_nowhere_at_all":
+    - 9
+    - 10
+  "what_it_means": "the spec cites the range I1-I8; a later phase document says all 10 invariants were re-verified. The numbers in the gap are cited nowhere at all, so the larger count is not merely unenumerated -- it names invariants no document in the tree ever mentions again."
+"the_request_to_ste":
+  "one": "declare the invariant set in a file the repository holds, ids and rules, one entry each."
+  "there_is_no_counterparty_response_and_this_file_does_not_pretend_one": "scl_requirements.yaml has daq_requirement_response.yaml beside it because there was a party to answer. There is none here. This request stands unanswered and is recorded as unanswered rather than as an agreement."
+  "three": "re-run the generality probe against the FIVE-property canonical set -- four observation properties plus recursive_computation -- because every `bent: zero` recorded in this pair before c80a2f0 quantified over four."
+  "two": "resolve the cardinality: eight or ten. If ten, the two beyond the cited range have never appeared in any document here."
+"what_status_means": "STE has not declared its invariant set. This is what its own documents CONSTRAIN, reconstructed by another party, and it must never be cited as STE's own statement. A set written about a party by another party is not that party's set -- the same reason a decision authored with both pens was demoted to a proposal in this pair's own history."
+"why_it_cannot_be_written_into_ste": "core.yaml records modifiable: false, and `bent: zero` is currently entailed by the core's bytes being unmodified at the pinned commit. A declaration written INTO the vendored tree would move the pin and destroy the entailment that carries the claim. It has to come from upstream."
