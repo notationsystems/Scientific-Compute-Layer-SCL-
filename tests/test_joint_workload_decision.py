@@ -81,9 +81,8 @@ def test_the_record_does_not_claim_independence(record):
     provenance = record["authorship_provenance"]
     not_claimed = " ".join(provenance["what_is_NOT_claimed"]).lower()
     assert "two independent parties" in not_claimed
-    convergence = provenance["prior_convergence_noted_and_discounted"].lower()
-    assert "not independent confirmation" in convergence, (
-        "a concurrent agreement from the same inputs under the same rule is not evidence")
+    assert "declined to make it" in not_claimed, (
+        "DAQ framed the choice; framing is not assent to the election made from it")
 
 
 def test_the_mitigation_is_the_hashes_and_not_the_authorship(record):
@@ -97,24 +96,54 @@ def test_the_mitigation_is_the_hashes_and_not_the_authorship(record):
 
 # ------------------------------------------------------- the decision
 
-def test_the_decision_is_stated_with_its_rule(record):
-    assert record["decision"]["workload"] == "fourier_transform_1d"
-    assert record["decision"]["daq_extension"] == "none"
-    assert record["selection_rule"]
-    assert len(record["rationale"]) >= 4
+def test_the_decision_elects_one_of_the_two_framed_options(record):
+    """DAQ framed the choice and declined to make it. A record that does
+    not elect is another proposal."""
+    choice = record["the_actual_choice"]
+    assert choice["elected"] in ("option_a", "option_b")
+    assert choice["option_a"] and choice["option_b"]
+    assert record["decision"]["workload"] == "least_squares"
 
 
-def test_the_deferral_records_that_it_is_not_a_prohibition(record):
-    """Kalman is deferred on sequencing and a second blocking requirement,
-    not forbidden -- and the coupling argument is carried, because that is
-    the part invisible to a reader in three months."""
-    deferred = record["what_this_decision_defers_and_why"]
-    assert deferred["this_record_does_not_foreclose_it"] is True
-    coupling = deferred["the_non_scalar_extension"].lower()
-    assert "one extension, not two" in coupling
-    assert "silent" in coupling and "loud" in coupling, "the coupling argument must be carried"
+def test_the_rule_defect_is_recorded_as_a_defect(record):
+    """Not as a preference, and not as a tradeoff. The rule cannot reach
+    the highest-leverage candidate by construction, which is a property of
+    the rule rather than a judgement about candidates."""
+    defect = record["the_rule_defect"]
+    assert defect["status"] == "RECORDED_AS_A_DEFECT"
+    assert "by construction" in defect["statement"]
+    assert "adjacency" in defect["why_it_is_a_defect_and_not_a_preference"]
+    assert defect["the_correction"], "a defect recorded without its repair is a complaint"
+
+
+def test_fourier_is_recorded_as_withdrawn_on_completion(record):
+    """The trigger for the whole re-measure: recommending something
+    already built is not a decision."""
+    assert "ON COMPLETION" in record["the_rule_defect"]["how_it_surfaced"]
+    assert "not on merit" in record["the_rule_defect"]["how_it_surfaced"]
+
+
+def test_the_unelected_option_records_what_it_would_have_cost(record):
+    assert record["what_convolution_would_have_cost"]
+    assert "exactly where they are" in record["what_convolution_would_have_cost"]
+
+
+def test_the_coupling_argument_is_carried_not_just_the_selection(record):
+    """The part that would be invisible to whoever picks up Kalman."""
+    carried = record["carried_forward_not_resolved"]
+    coupling = carried["the_non_scalar_coupling"].lower()
+    assert "one extension" in coupling
+    assert "silent" in coupling and "loud" in coupling
     assert "must lead" in coupling
-    assert len(deferred["what_would_have_to_be_true_first"]) >= 3
+    assert carried["the_pass_through"] and carried["recursive_depth"]
+
+
+def test_the_preconditions_record_that_the_reissue_came_first(record):
+    """Ordering was load-bearing: a decision written before the
+    canonicalization fix would bind digests about to change."""
+    joined = " ".join(record["preconditions_met"]).lower()
+    assert "resolved first" in joined
+    assert "about to change" in joined
 
 
 def test_the_record_binds_reissue_not_edit(record):
