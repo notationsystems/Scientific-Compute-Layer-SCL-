@@ -27,6 +27,10 @@ from scl.client import (
     run_scl_request,
 )
 from scl.fourier import encode_fourier_configuration, encode_real_signal
+from scl.least_squares import (
+    encode_least_squares_configuration,
+    encode_least_squares_input,
+)
 
 #: scl/protocol.hpp's complete vocabulary. Clause 8: an operation may use
 #: these and may not mint others.
@@ -46,6 +50,10 @@ KNOWN_GOOD = {
         encode_fourier_configuration(),
         encode_real_signal([1.0, 0.0, 0.0, 0.0]),
     ),
+    "least_squares": (
+        encode_least_squares_configuration(),
+        encode_least_squares_input([[1.0, 1.0], [1.0, 2.0], [1.0, 3.0]], [2.0, 3.0, 4.0]),
+    ),
 }
 
 #: Operation-specific metric keys, so clause 7's "must not emit another
@@ -53,6 +61,9 @@ KNOWN_GOOD = {
 OPERATION_SPECIFIC_METRICS = {
     "lj_pairwise_energy_forces": {"n_particles"},
     "fourier_transform_1d": {"n_samples", "transform_size"},
+    "least_squares": {"n_rows", "n_cols", "condition_number", "effective_rank",
+                       "jacobi_sweeps", "smallest_singular_value",
+                       "largest_singular_value"},
 }
 
 

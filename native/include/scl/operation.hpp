@@ -163,5 +163,6 @@ std::vector<std::string> supported_operation_names();
 // native/src/op_*.cpp for the decoders/validation/encoders each one owns).
 OperationOutcome run_lj_pairwise_energy_forces(const OperationRequest& request);
 OperationOutcome run_fourier_transform_1d(const OperationRequest& request);
+OperationOutcome run_least_squares(const OperationRequest& request);
 
 }  // namespace scl

@@ -10,6 +10,7 @@ namespace {
 const Operation kOperations[] = {
     {"lj_pairwise_energy_forces", &run_lj_pairwise_energy_forces},
     {"fourier_transform_1d", &run_fourier_transform_1d},
+    {"least_squares", &run_least_squares},
 };
 
 }  // namespace
