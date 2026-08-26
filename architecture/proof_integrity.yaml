@@ -86,6 +86,16 @@ instances:
     the_distinction_the_check_had_to_preserve: "a superseded status is not automatically a defect -- this pair deliberately retains dated measurements. So a superseded status RETAINED WITH THE CURRENT ONE STATED BESIDE IT passes, and a superseded status STANDING ALONE fails. Both are expressible and only one is a defect."
     severity: two_corrections_behind_with_every_suite_green
 
+  - name: a_gate_applied_to_content_it_does_not_govern
+    target: "was the planted violation refused by the mechanism it was planted for?"
+    subject: "was it refused?"
+    what_happened: "the cohort-identity probe fed TABLE-shaped content to gates that govern the PROPERTY shape. Four of five plantings refused -- MISSING_PROPERTY, MISSING_METHOD, MISSING_UNCERTAINTY_KIND, UNTYPED_QUANTITY -- and a fifth refused for an out-of-vocabulary uncertainty_kind. Every one of those refusals is about the SHAPE being wrong for the gate being asked, and none is about the property under test."
+    what_counting_would_have_concluded: "that the substrate REFUSES polymer observations. The opposite of the truth, produced by a run in which every gate behaved correctly and every refusal was real."
+    why_it_is_its_own_shape: "a reachability proof's whole content is that a specific mechanism engaged. A refusal is evidence only for the mechanism that produced it, and a gate answering a different question produces refusals that are not evidence for anything asked. Adjacent to a_check_that_read_its_own_input, but the failure here is in the STIMULUS rather than in the check: the wrong question was posed, correctly answered, and the answer counted."
+    repair: "name the expected id per case, so `refused` and `refused by the predicted mechanism` are different results; and show each gate only the content shape it governs, since the shapes are not interchangeable. Both were needed -- the id naming made the mistake visible, the shape separation removed it."
+    severity: a_correct_refusal_that_was_evidence_for_nothing
+    found_by: "the probe's own predicted-id comparison, on the first run, before any conclusion was drawn"
+
   - name: a_check_that_read_its_own_input_as_its_own_authority
     target: "does this alias denote the party it claims to?"
     subject: "is the alias absent from a set the alias itself defines?"
@@ -211,6 +221,18 @@ a_mutation_set_is_a_lower_bound_not_a_proof:
   what_it_still_earns: "three real defects in one run that the full suite had reported green: a surviving Joseph mutant whose justification then turned out to be false, a surviving F P F^T transposition that no scalar anchor could see, and an attribution the harness disproved -- the innovation-sign mutant is caught, but not by the test that claimed it, because that case drives all-zero measurements from a zero state and cannot distinguish the sign."
   the_harness_also_caught_its_own_operator_again: "one entry in the mutation set was a DEFECTIVE MUTATION: it declared an unused variable, which is a real statement, so the textual malformed-check passed it -- and dead code, so it changed nothing and reported SURVIVED. The malformed check catches comment-only diffs, not dead-code ones. The entry is corrected and kept, and the limit is recorded rather than left as a surprise for the next reader."
 
+a_fix_is_an_untested_assertion_until_the_probe_is_re_run:
+  rule: "re-run THE PROBE THAT MOTIVATED THE FIX against the fix. Not the suite -- the probe. A suite that was green before a repair and green after it has distinguished nothing, and the probe is the only thing that separates those two greens."
+  the_case_that_earned_it: "the cross-repository alias check was repaired with a derivation that excluded the alias from the set meant to catch the alias. The suite passed. The probe, re-run, ALSO passed -- and only re-running it a second time after anchoring the derivation to something that does not move with the alias showed the difference. The first repair had verified itself and reported success."
+  why_repairs_are_the_harder_case: "every other instance in this file probed a NEW check, where nobody yet believes anything. A repair arrives with the strong prior that it works -- it was written by someone who had just understood the defect -- and that prior is exactly what makes skipping the re-run feel reasonable."
+  the_stronger_form: "a repair whose probe passes for a NEW reason is not a repair. Re-running the probe answers whether it still fails; it does not answer whether the pass is for the intended reason. Where the two can be told apart, check the failure MESSAGE and not merely the failure."
+  relation_to_the_required_step: "this file already says plant the defect and watch it fail, before trusting a pass. That was written for construction. This is the same step at repair time, which is where it was missing."
+
+two_checks_passing_is_not_the_property_holding:
+  rule: "when several checks all pass over the same artifact, ask what each one actually reads. Adjacent questions answered correctly do not compose into the question nobody asked."
+  the_case_that_earned_it: "an alias naming the wrong party was caught by the VERBATIM-QUOTE check, not by the owner join it was probing. The join passed. With a correct quote -- which costs nothing to produce -- the case went straight through both. Two independent checks passing had established neither's property, because each was answering something adjacent to it."
+  the_diagnostic: "for each check, name the state in which it FAILS. If the state you care about is in no check's failure set, the greens are unrelated to it however many there are."
+
 # ------------------------------------------- the sharpest sub-family --
 
 coverage_specified_by_enumeration:
@@ -219,7 +241,7 @@ coverage_specified_by_enumeration:
   how_to_tell_you_are_in_it: "the check NAMES what it looks at instead of deriving it."
   why_it_is_the_sharpest: "a check specified by enumeration is correct exactly until the world grows an item nobody added to the list, and it fails SILENTLY at that moment -- it reports success, because the thing it enumerates is still fine. No coverage at all leaves a visible hole; coverage-by-enumeration reports green over the hole, and the green is then cited as evidence."
   its_repair_rule_is_adopted_for_the_whole_class: "ASSERT THE PROPERTY, NOT THE ENUMERATION. Sharper than the general diagnostic below and strictly stronger where it applies: adding the missing item fixes one instance, asserting the property fixes the class. The shadow guard follows it -- it refuses any module binding a test name twice, over every module found, rather than checking the files known to have had the problem."
-  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 15 instances below, each measured, not the fact that two authors named it."
+  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 16 instances below, each measured, not the fact that two authors named it."
 
 # ------------------------------------------------------- the pattern --
 
