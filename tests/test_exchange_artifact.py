@@ -190,14 +190,44 @@ def test_implemented_workloads_report_no_missing_primitives():
             assert spec["primitives_missing"] == [], f"{name} claims IMPLEMENTED but lists gaps"
 
 
-def test_linear_algebra_family_is_recorded_as_missing():
-    """The measured fact that drives the whole exchange: no matrix,
-    solve, or decomposition capability exists."""
-    for primitive in ("matrices", "matrix_multiplication", "transpose",
-                       "linear_solves", "decompositions"):
-        assert SUBSTRATE[primitive]["classification"] == "MISSING"
-    for workload in ("least_squares", "pca", "kalman_filter_linear"):
-        assert WORKLOADS[workload]["primitives_missing"], f"{workload} should report gaps"
+def test_every_required_primitive_is_classified_somewhere():
+    """THE PROPERTY, not the inventory. Two lists -- what a workload
+    REQUIRES and what the substrate CLASSIFIES -- and until this test
+    nothing checked they agree.
+
+    Found by closing the Kalman row: covariance_propagation and
+    psd_handling were named in kalman_filter_linear's primitives_required
+    and had NO substrate entry at all. The artifact required something it
+    never inventoried, and every suite was green. Adding the two entries
+    fixes that instance; asserting the correspondence fixes the class."""
+    unclassified = {
+        (workload, primitive)
+        for workload, body in WORKLOADS.items()
+        for primitive in body.get("primitives_required", ())
+        if primitive not in SUBSTRATE
+    }
+    assert not unclassified, (
+        f"required but never classified: {sorted(unclassified)}")
+
+
+def test_a_missing_primitive_and_a_reported_gap_agree():
+    """The other direction of the same correspondence: a workload reports
+    a primitive as missing only if the substrate says it is missing, and
+    reports every one that is.
+
+    Stated as an equality rather than as a list of which primitives are
+    MISSING today, because that list moved the moment Kalman landed --
+    matrices, matrix_multiplication, transpose and linear_solves are all
+    EXISTS now, and a test naming them would have had to be edited in the
+    commit that made them true."""
+    for workload, body in WORKLOADS.items():
+        required = set(body.get("primitives_required", ()))
+        reported = set(body.get("primitives_missing", ()))
+        actually_missing = {p for p in required
+                            if SUBSTRATE[p]["classification"] == "MISSING"}
+        assert reported == actually_missing, (
+            f"{workload}: reports {sorted(reported)} missing, substrate says "
+            f"{sorted(actually_missing)}")
 
 
 def test_cuda_state_does_not_claim_gpu_execution():
@@ -235,8 +265,23 @@ def test_kalman_carries_both_blocking_dependencies_explicitly():
     assert "structured_measurement_uncertainty" in rows
     assert "recursive_generation_depth" in rows
     for row in rows.values():
-        assert row["status"] == "UNSATISFIED"
         assert row["owner"] == "daq"
+        # STATUS IS NOT PINNED TO A VALUE -- it moved from UNSATISFIED to
+        # SATISFIED when DAQ closed both rows, and a test asserting the old
+        # value would have had to be edited in the commit that made it
+        # false. What is pinned is the OBLIGATION that comes with the
+        # value: a row may only claim SATISFIED if it says who satisfied it
+        # and how this side verified it, so the status cannot be flipped
+        # without evidence travelling with it.
+        assert row["status"] in ("UNSATISFIED", "SATISFIED")
+        if row["status"] == "SATISFIED":
+            assert row.get("satisfied_by"), \
+                f"{row['requirement']} claims SATISFIED without naming what satisfied it"
+            assert row.get("verified_how"), \
+                f"{row['requirement']} claims SATISFIED without saying how this side checked it"
+            assert "measured" in row["verified_how"].lower() or \
+                   "re-ran" in row["verified_how"].lower(), \
+                f"{row['requirement']}'s verification must be a measurement, not a reading"
     depth = rows["recursive_generation_depth"]
     assert "vacuously_enforced" in depth["statement"] + depth["measured_basis"]
     assert "proposed_rule" in depth, "the depth correction must travel as a stated rule, not a hint"

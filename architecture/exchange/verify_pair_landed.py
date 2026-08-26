@@ -37,6 +37,8 @@ SHARED = (
     "architecture/exchange/canonical_yaml.sha256",
     "architecture/exchange/canonicalization_fixture.yaml",
     "architecture/exchange/canonicalization_fixture.sha256",
+    "architecture/exchange/daq_requirement_response.yaml",
+    "architecture/exchange/daq_requirement_response.sha256",
     "architecture/exchange/scl_requirements.yaml",
     "architecture/exchange/scl_requirements.sha256",
 )

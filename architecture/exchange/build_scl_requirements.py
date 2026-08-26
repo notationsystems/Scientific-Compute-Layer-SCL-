@@ -32,24 +32,59 @@ SUBSTRATE = {
         "evidence": "std::complex<double> throughout native/src/fourier.cpp and the cuFFT backend; complex wire encoding in python/scl/fourier.py",
     },
     "decompositions": {
-        "classification": "MISSING",
-        "evidence": "no QR, Cholesky, LU, SVD or eigendecomposition exists in any traced source file",
+        "classification": "EXISTING",
+        "evidence": "two: a one-sided Jacobi SVD in native/src/least_squares.cpp and a two-sided Jacobi symmetric eigendecomposition in native/src/covariance.cpp. Still no QR, Cholesky or LU -- the family is not complete, and EXISTING here means the workloads that name it are served, not that every decomposition is present.",
+        "prior_classification": "MISSING",
+        "why_the_prior_is_retained": "accurate when written; both solvers were added by the least_squares and kalman_filter_linear phases.",
     },
     "dynamic_programming": {
         "classification": "MISSING",
         "evidence": "no recurrence table, no argmax/backtracking structure anywhere in native/ or python/scl/",
     },
     "linear_solves": {
+        "classification": "EXISTING",
+        "evidence": "two, deliberately different: a one-sided Jacobi SVD in native/src/least_squares.cpp for the rank-deficient least-squares case, and a Gauss-Jordan inverse with partial pivoting in native/src/kalman.cpp for the small innovation covariance. The prior evidence read 'no solver of any kind; the only division in native math is scalar'.",
+        "prior_classification": "MISSING",
+        "why_the_prior_is_retained": "it was an accurate measurement when made. This artifact records what SCL measured and when, not a continuously-updated view.",
+    },
+    "argmax": {
         "classification": "MISSING",
-        "evidence": "no solver of any kind; the only division in native math is scalar",
+        "evidence": "re-measured: no argmax, arg_max or std::max_element anywhere in native/src or native/include. Required by viterbi.",
+        "found_by": "test_every_required_primitive_is_classified_somewhere, which asserts the correspondence between what workloads REQUIRE and what this inventory CLASSIFIES. It was never classified either way -- neither present nor recorded absent.",
+    },
+    "backtracking": {
+        "classification": "MISSING",
+        "evidence": "re-measured: no backtracking of any kind in native/. Required by viterbi.",
+        "found_by": "the same correspondence check.",
+    },
+    "sliding_window": {
+        "classification": "MISSING",
+        "evidence": "re-measured: no windowing primitive in native/. Required by convolution_1d.",
+        "found_by": "the same correspondence check.",
+    },
+    "covariance_propagation": {
+        "classification": "EXISTING",
+        "evidence": "covariance_update in native/src/kalman.cpp, with its contract stated over ANY gain in native/include/scl/kalman.hpp and enforced by native/tests/test_kalman_analytic.cpp.",
+        "prior_classification": "ABSENT_FROM_THIS_INVENTORY",
+        "why_the_prior_is_retained": "this primitive was NAMED by kalman_filter_linear's primitives_required and had no substrate entry at all -- so the artifact required something it never classified. Found while closing the row, and recorded rather than quietly added.",
+    },
+    "psd_handling": {
+        "classification": "EXISTING",
+        "evidence": "validate_covariance and symmetric_eigenvalues in native/src/covariance.cpp -- five rules checked in a stated order, with the spectrum reported on success and failure alike. A symmetric eigensolver rather than the existing SVD, because sigma_i = |lambda_i| discards the sign PSD is a question about.",
+        "prior_classification": "ABSENT_FROM_THIS_INVENTORY",
+        "why_the_prior_is_retained": "same gap as covariance_propagation, found the same way.",
     },
     "matrices": {
-        "classification": "MISSING",
-        "evidence": "no matrix type, no 2-D indexing convention, no row/column-major decision recorded anywhere",
+        "classification": "EXISTING",
+        "evidence": "row-major std::vector<double> with the dimensions travelling beside it, declared in native/include/scl/covariance.hpp and scl/kalman.hpp. Re-measured: 4 explicit row-major declarations. NOT a matrix TYPE -- there is still no class enforcing dimensional agreement, so the convention is documented and hand-checked rather than compiler-checked. Recorded as EXISTS for what the workloads need and as a named limitation, not upgraded to a claim nothing supports.",
+        "prior_classification": "MISSING",
+        "why_the_prior_is_retained": "it was an accurate measurement when made. This artifact records what SCL measured and when, not a continuously-updated view.",
     },
     "matrix_multiplication": {
-        "classification": "MISSING",
-        "evidence": "grep for matmul/gemm/transpose across native/src, native/include and python/scl returns nothing",
+        "classification": "EXISTING",
+        "evidence": "matmul in native/src/kalman.cpp, used for the predict step, the innovation covariance, the gain and both Joseph terms. Re-measured: 10 hits across native/src, native/include and python/scl, where the prior evidence recorded zero.",
+        "prior_classification": "MISSING",
+        "why_the_prior_is_retained": "it was an accurate measurement when made. This artifact records what SCL measured and when, not a continuously-updated view.",
     },
     "numerical_differentiation": {
         "classification": "OUT OF SCOPE",
@@ -84,8 +119,10 @@ SUBSTRATE = {
         "evidence": "fourier_transform_1d, forward and inverse, three normalizations, validated against impulse/DC/pure-tone/Parseval/reconstruction",
     },
     "transpose": {
-        "classification": "MISSING",
-        "evidence": "no matrix type exists to transpose",
+        "classification": "EXISTING",
+        "evidence": "transpose in native/src/kalman.cpp; also in native/src/covariance.cpp and native/include/scl/covariance.hpp. The prior evidence read 'no matrix type exists to transpose', which was true when written.",
+        "prior_classification": "MISSING",
+        "why_the_prior_is_retained": "it was an accurate measurement when made. This artifact records what SCL measured and when, not a continuously-updated view.",
     },
     "vectors": {
         "classification": "REUSABLE",
@@ -99,8 +136,8 @@ _UNORDERED = "not_required_rows_exchangeable"
 
 def workload(*, modality, minimum_observation_fields, required_metadata, uncertainty,
              conditions, ordering, structured, observation_requirements, model_parameters,
-             computational_parameters, primitives_required, primitives_missing, status,
-             notes, blocking_requirements=()):
+             computational_parameters, primitives_required, status,
+             notes, blocking_requirements=(), primitives_missing=None):
     """`blocking_requirements` is deliberately STRUCTURAL rather than prose
     in `notes`: a requirement buried in a paragraph arrives in the other
     repository as something to read, whereas a row arrives as something to
@@ -117,7 +154,16 @@ def workload(*, modality, minimum_observation_fields, required_metadata, uncerta
         "notes": notes,
         "observation_requirements": observation_requirements,
         "ordering_requirements": ordering,
-        "primitives_missing": primitives_missing,
+        # DERIVED, never passed in. Every workload used to carry a
+        # hand-written primitives_missing beside its primitives_required,
+        # and the two drifted the moment a primitive was implemented:
+        # least_squares still listed matrices, matrix_multiplication,
+        # transpose and linear_solves as missing after building all four.
+        # A list that must agree with another list is a list that will
+        # stop agreeing, so it is computed from the substrate instead.
+        "primitives_missing": sorted(
+            p for p in primitives_required
+            if SUBSTRATE[p]["classification"] == "MISSING"),
         "primitives_required": primitives_required,
         "required_metadata": required_metadata,
         "status_in_scl": status,
@@ -142,7 +188,6 @@ WORKLOADS = {
         model_parameters=["none -- a transform asserts no model of the system"],
         computational_parameters=["direction", "normalization", "precision", "input_kind", "spectrum_convention"],
         primitives_required=["complex_arithmetic", "reductions", "transforms"],
-        primitives_missing=[],
         status="IMPLEMENTED",
         blocking_requirements=[
             {
@@ -177,7 +222,6 @@ WORKLOADS = {
         model_parameters=["kernel, when the kernel is a modelling choice rather than a second observation"],
         computational_parameters=["mode_full_same_valid", "boundary_handling", "precision"],
         primitives_required=["reductions", "sliding_window"],
-        primitives_missing=["sliding_window"],
         status="NOT_IMPLEMENTED",
         notes="Shares the ordered-1d modality with fourier_transform_1d, so its DAQ requirement is already satisfied wherever Fourier's is. Direct and FFT-based algorithms could share one mathematical operation identity.",
     ),
@@ -199,7 +243,6 @@ WORKLOADS = {
         model_parameters=["the choice of design matrix / basis functions is a modelling assertion, not an observation"],
         computational_parameters=["solver_qr_cholesky_svd_or_normal_equations", "weighting", "precision"],
         primitives_required=["matrices", "matrix_multiplication", "transpose", "decompositions", "linear_solves"],
-        primitives_missing=["matrices", "matrix_multiplication", "transpose", "decompositions", "linear_solves"],
         status="NOT_IMPLEMENTED",
         blocking_requirements=[
             {
@@ -245,7 +288,6 @@ WORKLOADS = {
         model_parameters=["centering and scaling choices are modelling assertions"],
         computational_parameters=["n_components", "centering", "scaling", "decomposition_method_svd_or_eigen", "precision"],
         primitives_required=["matrices", "matrix_multiplication", "transpose", "decompositions"],
-        primitives_missing=["matrices", "matrix_multiplication", "transpose", "decompositions"],
         status="NOT_IMPLEMENTED",
         blocking_requirements=[
             {
@@ -299,8 +341,7 @@ WORKLOADS = {
         ],
         computational_parameters=["precision", "gain_solve_method_cholesky_or_ldlt", "covariance_update_form_standard_or_joseph"],
         primitives_required=["matrices", "matrix_multiplication", "transpose", "linear_solves", "covariance_propagation", "psd_handling"],
-        primitives_missing=["matrices", "matrix_multiplication", "transpose", "linear_solves", "covariance_propagation", "psd_handling"],
-        status="NOT_IMPLEMENTED",
+        status="IMPLEMENTED",
         blocking_requirements=[
             {
                 "requirement": "structured_measurement_uncertainty",
@@ -308,7 +349,11 @@ WORKLOADS = {
                 "statement": "DAQ must be able to express a measurement covariance R, not only a scalar uncertainty per observation. A scalar is sufficient ONLY when the measurement is genuinely 1-D and uncorrelated; for a measurement vector it discards the off-diagonal terms that determine how the filter weights components against each other.",
                 "measured_basis": "SCL's implemented operations carry no uncertainty channel at all, and the evidence layer's uncertainty vocabulary is scalar-or-absent; neither side currently has a representation for a covariance.",
                 "consequence_if_unmet": "R would have to be ASSERTED by the modeller rather than measurement-derived, which moves the estimate's confidence from measured to asserted without that being visible in the result.",
-                "status": "UNSATISFIED",
+                "status": "SATISFIED",
+                "satisfied_by": "science/structured_uncertainty.py in the acquisition repository, reported in architecture/exchange/daq_requirement_response.yaml.",
+                "verified_how": "SCL re-ran the claims against DAQ's module directly rather than reading DAQ's tests. Measured here: a scalar sigma on a multivariate value is REFUSED as SCALAR_UNCERTAINTY_ON_A_MULTIVARIATE_VALUE, a matrix on a scalar value is REFUSED as STRUCTURED_UNCERTAINTY_ON_A_SCALAR_VALUE, a wrong outer dimension is REFUSED, and a well-formed 2x2 on a 2-vector is admitted. The ONLY-WHEN clause of this requirement is enforced rather than advisory.",
+                "the_boundary_is_real_and_was_verified_as_such": "DAQ states it does not check the five rules of SCL's covariance contract, and SCL confirmed that directly: a RAGGED R of the correct outer length, a NON-SYMMETRIC R and an INDEFINITE R are all ADMITTED by DAQ. So numeric-entry, rectangular, square, symmetric and positive-semidefinite are load-bearing on the SCL side rather than redundant, which is what native/include/scl/covariance.hpp already assumes.",
+                "why_this_status_is_SCL_to_set": "DAQ deliberately recorded no status, on the grounds that writing SATISFIED in its own artifact would be answering its counterparty's question. The status is set here, on evidence re-measured here.",
             },
             {
                 "requirement": "recursive_generation_depth",
@@ -317,7 +362,11 @@ WORKLOADS = {
                 "measured_basis": "architecture/invariants.yaml declares the invariant; its own recorded evidence is that no generative path exists to bound. Every SCL operation today is a pure function of (configuration, input) with no state carried between invocations, so SCL cannot exercise it either.",
                 "consequence_if_unmet": "A recursive estimate would carry an unbounded, unrecorded provenance chain: step T's identity depends on step T-1's without any depth being tracked, so nothing would detect a trajectory that had drifted arbitrarily far from measured input.",
                 "proposed_rule": "depth=0 when initialization_provenance=measured AND every input stream is class=measured; depth=prior_depth+1 when initialization_provenance=computed(prior_id). GUARD: if the measurement stream is ITSELF computed, depth inherits from the STREAM rather than from the initialization -- which closes composition, not merely recursion. Offered as a measured requirement for DAQ to accept, amend or reject; SCL does not own this invariant.",
-                "status": "UNSATISFIED",
+                "status": "SATISFIED",
+                "satisfied_by": "science/lineage_depth.py in the acquisition repository, with the invariant moved to ENFORCED there.",
+                "verified_how": "SCL re-ran the depth accounting directly. Measured here: a measured initialization with a measured stream is depth 0; a MEASURED initialization consuming another filter\'s COMPUTED output is depth 1, NOT 0 -- so the composition guard is real and an initialization-only reading is excluded; and a computed initialization at depth 0 combined with a computed stream at depth 2 is depth 3, so the depth is a MAXIMUM over both source kinds rather than taken from the initialization alone. A bound exists and is declared (MAX_LINEAGE_DEPTH = 3).",
+                "the_proposed_rule_was_adopted_including_its_guard": "the GUARD clause above -- composition, not merely recursion -- is the part most easily dropped in implementation, because it only bites when a filter consumes another filter. It was implemented and SCL verified it directly rather than accepting that it had been.",
+                "a_stale_status_this_artifact_carried": "the measured_basis above says the invariant is declared vacuously_enforced. DAQ corrected that to represented_unenforced on 2026-08-25, because the earlier evidence proved acyclicity rather than boundedness, and it is now ENFORCED. The prior text is left in place rather than rewritten: it was an accurate measurement when made, and this artifact records when SCL measured, not a continuously-updated view of DAQ.",
             },
         ],
         notes="The only candidate that is RECURSIVE, and therefore the only one that would make generation_depth_bounded operative rather than vacuous. Its two blocking_requirements are independent: structured R is a DATA-SHAPE gap and recursive depth is an INVARIANT gap, and satisfying either leaves the other untouched. See recursive_computation_analysis below.",
@@ -337,7 +386,6 @@ WORKLOADS = {
         model_parameters=["Kp, Ki, Kd and the setpoint are asserted control choices, never observations"],
         computational_parameters=["anti_windup_strategy", "derivative_filtering", "precision"],
         primitives_required=["reductions", "numerical_integration", "numerical_differentiation", "state_transitions"],
-        primitives_missing=["numerical_integration", "numerical_differentiation", "state_transitions"],
         status="NOT_IMPLEMENTED",
         notes="PURE COMPUTATION ONLY. Physical actuation is explicitly out of scope: connecting a controller output to equipment is physical intervention on the system under study, and no actuation-authority boundary exists in this architecture. Carried forward as unresolved.",
     ),
@@ -356,7 +404,6 @@ WORKLOADS = {
         model_parameters=["transition matrix A, emission matrix B and initial distribution pi are all asserted model choices, never observations"],
         computational_parameters=["log_space_or_linear", "tie_breaking_rule", "precision"],
         primitives_required=["dynamic_programming", "reductions", "argmax", "backtracking"],
-        primitives_missing=["dynamic_programming", "argmax", "backtracking"],
         status="NOT_IMPLEMENTED",
         notes="Its primitives are shared with no other candidate here, so it would establish a third computational family rather than extend either existing one.",
     ),
