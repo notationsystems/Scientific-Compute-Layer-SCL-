@@ -86,6 +86,19 @@ instances:
     the_distinction_the_check_had_to_preserve: "a superseded status is not automatically a defect -- this pair deliberately retains dated measurements. So a superseded status RETAINED WITH THE CURRENT ONE STATED BESIDE IT passes, and a superseded status STANDING ALONE fails. Both are expressible and only one is a defect."
     severity: two_corrections_behind_with_every_suite_green
 
+  - name: the_aggregate_was_counted_as_evidence_for_each_of_its_members
+    target: "how much evidence is there for THIS item individually?"
+    subject: "does this item's token appear on a line?"
+    what_happened: "the STE reconstruction derives a citation index by scanning the vendored documents for `I<n>`. The spec's only mention of two of those invariants is the RANGE `I1-I8` -- and that string contains `I1` and `I8` as substrings, so an unmasked scan credited the range to both endpoints as though each had a citation of its own. I1 came back with evidence. Its evidence was the range."
+    the_direction_is_the_finding_not_the_bug: "the error is ANTI-CORRELATED WITH WARRANT. An item already cited six times gains one spurious citation and nothing changes. An item cited nowhere individually gains its ONLY citation -- so the false evidence is the whole of its evidence base. The inflation is largest exactly where confidence is least justified, which is the opposite of how a measurement error is usually assumed to distribute."
+    why_it_would_have_survived_review: "the index was RIGHT about six of the eight, and right in the way that is easy to check -- the citations it found for I5 are real and quotable. A scan that is correct wherever you spot-check it, and wrong precisely where there is nothing to spot-check against, does not read as broken."
+    the_general_form: "WHERE A NOTATION HAS AN INDIVIDUAL FORM AND AN AGGREGATE FORM THAT CONTAINS IT, AN UNMASKED SCAN COUNTS THE AGGREGATE AS EVIDENCE FOR EVERY MEMBER. Ranges (I1-I8), qualified statuses (vacuously_enforced contains enforced), namespaced ids, versioned names, plural forms. The diagnostic: for each token your scan matches, ask what LONGER token contains it, then ask whether the longer one means something you are not counting."
+    the_repository_had_already_met_this_class_and_handled_it: "tests/test_cross_repository_claims.py matches status words with `(?<![\\w])<status>(?![\\w])` so `enforced` does not fire inside `vacuously_enforced`. Same shape, guarded there, unguarded here -- and the guard that works for a word boundary does NOT work for a range, because both endpoints of `I1-I8` are genuine word-bounded tokens. The class recurred in a form the existing defence could not reach."
+    repair: "collect the aggregates FIRST, mask their spans out of the line, then scan for individuals in what remains. The aggregate is recorded separately as an aggregate, so nothing is lost -- the range is still evidence, just evidence OF A RANGE."
+    what_makes_the_repair_checkable: "the test does not read the prose beside the index. It asserts that the set of invariants the reconstruction calls UNRECOVERABLE equals the set the index says is covered only by a range, and that no unrecoverable one has an individual citation. Two derived sets compared to each other; the prose cannot drift away from the data without failing."
+    severity: the_least_supported_item_appeared_to_be_supported_and_no_spot_check_would_have_shown_it
+    found_by: "reading the generator's own output and noticing that the invariant the prose called unrecoverable had a citation listed"
+
   - name: a_pin_that_ratified_the_state_it_should_have_caught
     target: "does the record still describe the repository?"
     subject: "does the record still say what it said last time?"
@@ -300,7 +313,7 @@ coverage_specified_by_enumeration:
   how_to_tell_you_are_in_it: "the check NAMES what it looks at instead of deriving it."
   why_it_is_the_sharpest: "a check specified by enumeration is correct exactly until the world grows an item nobody added to the list, and it fails SILENTLY at that moment -- it reports success, because the thing it enumerates is still fine. No coverage at all leaves a visible hole; coverage-by-enumeration reports green over the hole, and the green is then cited as evidence."
   its_repair_rule_is_adopted_for_the_whole_class: "ASSERT THE PROPERTY, NOT THE ENUMERATION. Sharper than the general diagnostic below and strictly stronger where it applies: adding the missing item fixes one instance, asserting the property fixes the class. The shadow guard follows it -- it refuses any module binding a test name twice, over every module found, rather than checking the files known to have had the problem."
-  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 21 instances below, each measured, not the fact that two authors named it."
+  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 22 instances below, each measured, not the fact that two authors named it."
 
 # ---------------------------------------------- the predictive tools --
 #
