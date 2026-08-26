@@ -334,12 +334,29 @@ closely resembles.
 originally called the second arrival *evidence about the class rather than
 a coincidence about the phase*. That claim was later falsified directly.
 Two sessions independently closed the canonical-YAML collection class,
-independently reached the same refusal, by the same argument — and
-independently wrote down the same **wrong reason** for it. Both recorded
-that the dependency-free reader *refuses* a nested sequence. It does not:
-the compact single-element form is silently mistyped, returning a string
-where PyYAML returns a list, with no error on either side. Each half had
-probed a form that does raise, and generalized from it.
+independently reached the same refusal, by the same argument. The
+convergence was real and it still supplied no second measurement.
+
+**And the first version of this paragraph got the counter-instance
+itself wrong**, which is worth leaving visible rather than quietly
+restating. It said *both* halves recorded the same wrong reason. They did
+not. This layer probed the multi-element compact form, which does raise,
+and recorded a loud refusal. The acquisition layer probed the
+single-element form, measured the silent mistyping correctly, and has said
+so in `architecture/canonicalization_defect.yaml` since before either
+reissue — unchanged, and still there.
+
+What actually went wrong was **the merge**. Behavioural equivalence was
+checked across every probed shape and held, so this layer's serializer was
+adopted wholesale — and its prose carried this layer's reason into a
+repository that already held the correct one. A correct measurement was
+silently replaced by an incorrect one, and no test anywhere covered it,
+because a measured fact recorded in prose is bound to nothing.
+
+That is the stronger lesson and it is not the one convergence teaches: two
+authors agreeing adds no coverage, but a merge can *remove* coverage that
+existed. Behavioural equivalence licenses taking the other side's **code**.
+It does not license taking their **account of why**.
 
 So convergence is demoted here from evidence to **a prompt to
 re-measure**. Two authors agreeing shows they share a method, a
