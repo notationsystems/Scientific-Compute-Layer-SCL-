@@ -1,0 +1,89 @@
+# WHEN A CHECK PROVES SOMETHING ABOUT ITSELF INSTEAD OF ABOUT ITS TARGET.
+#
+# A named failure class, held HERE rather than in either repository's own
+# contract because every instance was found in one layer and applies to
+# both. Byte-identical in the compute and acquisition repositories and
+# checked by architecture/exchange/verify_pair_landed.py, for the same
+# reason the shared serializer is: a rule one side can edit alone is a
+# rule the two sides can come to disagree about.
+#
+# THE SHAPE. A check has a target and a subject. The target is what it is
+# meant to establish; the subject is what it actually reads. When those
+# come apart, the check keeps reporting -- confidently, in the reassuring
+# direction -- about the subject. Every instance below passed while the
+# property it named was false.
+#
+# WHY THIS ONE OUTRANKS ORDINARY DEFECTS. A wrong implementation is one
+# wrong thing. A hollow proof is every conclusion that rested on it. The
+# shadowed-test instance is the sharpest: it did not sit alongside the
+# other repairs in this phase, it undermined the evidence for them, in the
+# one file where the encoding work was proved.
+extends: core@1.0.0
+
+rule: "A GREEN SUITE IS NOT EVIDENCE THAT THE TESTS IN IT RAN. More generally: establish that a check CAN fail on the thing it names, or it has established nothing. A check that has never been shown to fail has not been shown to be capable of failing."
+
+required_step: "for every new check, plant the defect it claims to catch and watch it fail, before trusting a pass. Not a review step -- a construction step. Every instance below was caught this way or would have been."
+
+# ------------------------------------------------------- the instances --
+
+instances:
+
+  - name: grep_for_fatal
+    target: "did the push succeed?"
+    subject: "does the word `fatal` appear in the command output?"
+    what_happened: "matched a stale `fatal` from earlier output and reported failure over a success, confidently. The pair went half-landed."
+    repair: "ask the REMOTE for its state (git ls-remote), not the output for a string."
+    severity: reported_the_opposite_of_the_truth
+
+  - name: absence_of_violation_mistaken_for_emptiness
+    target: "is the forbidden domain empty?"
+    subject: "did the scan find a violation?"
+    what_happened: "a scan over an empty or wrongly-built domain finds nothing and passes. Measured once with a confounded probe: a plain dict is itself unhashable, so every consumer check failed for the wrong reason."
+    repair: "assert the domain is non-empty BEFORE asserting it is clean. Emptiness is a fact about today; hold it where it reports when it stops being true."
+    severity: vacuous_pass
+
+  - name: mutation_applied_mistaken_for_mutation_effective
+    target: "does the suite catch this broken behaviour?"
+    subject: "was a textual diff applied to the file?"
+    what_happened: "a clause-3 mutation that added only a comment compiled and reported SURVIVED, as though a test had failed to catch a real change. There was no change to catch."
+    repair: "compare with comments stripped (C++) or through an AST (Python); a diff that cannot reach execution is MALFORMED, counted neither as caught nor as surviving."
+    severity: reported_a_test_gap_that_did_not_exist
+
+  - name: shadowed_test
+    target: "do these tests pass?"
+    subject: "does the module's namespace, after import, pass?"
+    what_happened: "three functions were redefined later in the same file. Python keeps the last binding, so the earlier three were dead code, and pytest -- which collects a namespace, not a source file -- reported 82 collected and green while three of them did not exist. A shadowed test is not a failing test, it is an ABSENT one. One of the three called a name the repository does not define, so it could not have run even unshadowed: a two-parser agreement check had been written, reviewed, committed, and never once executed."
+    repair: "tests/test_no_test_name_is_shadowed.py -- refuse any module binding a test name twice, read from SOURCE via AST, because the imported module is exactly where the evidence has already been destroyed."
+    severity: undermined_the_evidence_for_every_other_repair_in_the_phase
+
+  - name: a_property_stated_in_an_artifact_is_not_a_property_enforced_by_one
+    target: "does this reissue name the fixture it replaced?"
+    subject: "nothing -- no check read the field"
+    what_happened: "one repository's record named the NEW fixture as its own predecessor (a self-link); the other never moved the field at all (a skipped link). The two records disagreed while both suites were green."
+    repair: "two tests -- one rejecting a self-link, one checking the named predecessor against committed git history rather than against the record's own say-so. A record is not an oracle for its own provenance."
+    severity: silent_divergence_between_repositories
+
+  - name: verify_certified_the_corruption
+    target: "was this stored file tampered with or corrupted?"
+    subject: "does the id recomputed from these fields match the id stored beside them?"
+    what_happened: "a file containing a bare NaN was read back, its id recomputed, and _verify PASSED -- correctly by content_hash's own rules, because hashing is deterministic over whatever bytes it is handed. The check did not fail to catch the corruption; it certified it. The value so certified was not equal to itself, and the bytes are not JSON, so the id was reproducible by exactly one implementation. The module docstring claimed on-disk corruption 'is caught on read rather than trusted'."
+    repair: "strict_json_loads at every reader whose writer already refuses. And the general form: recomputation succeeding is not the property wanted -- INDEPENDENT recomputability is."
+    severity: an_integrity_check_that_blessed_the_thing_it_guarded_against
+
+# ------------------------------------------ what convergence is worth --
+
+convergence_is_not_evidence:
+  claim_being_corrected: "an earlier note recorded two subsystems independently deriving the same rule as EVIDENCE ABOUT THE CLASS rather than a coincidence about the phase. That note overstates, and this entry is filed next to it rather than replacing it."
+  the_counter_instance: "two sessions independently closed the canonical-YAML collection class, independently reached the same refusal, by the same argument -- and independently wrote down the same WRONG REASON for it. Both recorded that the dependency-free reader refuses a nested sequence. It does not; the compact single-element form is silently mistyped, returning a string where PyYAML returns a list, with no error on either side. Each half had probed a form that does raise, and generalized."
+  what_it_actually_shows: "two authors reaching the same conclusion shows they share a method, a vocabulary, or a blind spot -- often all three. It is not a second measurement. Where both halves probed the same shape, the second arrival added no coverage at all."
+  demoted_to: "a PROMPT TO RE-MEASURE, not a form of evidence. Convergence raises the value of re-running the underlying measurement; it never substitutes for it."
+  what_did_catch_it: "running the two readers against each other, on every shape, including the ones neither half had probed."
+  the_practice_that_survives: "when two independent efforts agree, UNION their fixtures rather than choosing one -- neither set subsumed the other, and a shape nobody pins is a shape nobody agreed. That is a coverage argument, and it stands. The evidential claim does not."
+
+# ------------------------------------------------------- the pattern --
+
+why_these_are_one_class:
+  common_form: "the check reads a PROXY for its target -- output text for state, a diff for a behaviour change, a namespace for a source file, a field's presence for its correctness, a self-consistent recomputation for independent reproducibility."
+  why_the_proxy_is_chosen: "in every instance the proxy was easier to read and correlated with the target in the cases the author had in mind. It decorrelates exactly where it matters: on the failure the check exists to catch."
+  the_diagnostic_question: "what would have to be true for this check to pass while the property it names is false? If that state is reachable, the check reads a proxy."
+  relation_to_the_encoding_rule: "adjacent, not identical. One-meaning-one-encoding is about ambiguous BYTES; this is about hollow PROOFS. They meet where a proof is itself an artifact -- the reissue chain and the integrity check are both."

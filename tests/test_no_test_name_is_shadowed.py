@@ -23,6 +23,11 @@ separate -- a GREEN SUITE IS NOT EVIDENCE THAT THE TESTS IN IT RAN.
 Deliberately source-level, via AST rather than via the imported module:
 the imported module is exactly where the evidence has already been
 destroyed, because by then the shadowed definition is gone.
+
+Enforces the invariant `a_check_must_be_shown_capable_of_failing`
+(architecture/invariants.yaml in the acquisition repository); the class
+this instance belongs to is recorded in architecture/proof_integrity.yaml,
+held byte-identical in both repositories.
 """
 
 from __future__ import annotations

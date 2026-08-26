@@ -326,12 +326,36 @@ coordinating.** The compute layer generalized this rule over
 presence-flag-guarded payloads at the same time the acquisition layer
 added `VALUE_AND_ABSENCE_BOTH_PRESENT` to its observation-table gate —
 refusing a value and an absence-reason asserted together. Neither knew of
-the other's work. That is evidence about the class rather than a
-coincidence about the phase: a rule two subsystems derive independently
-from their own pressures is a property of the substrate, not of either
-contract. Recorded as a candidate for **core** rather than for SCL's
-contract or DAQ's, alongside the absent-is-not-zero candidate it closely
-resembles.
+the other's work. Recorded as a candidate for **core** rather than for
+SCL's contract or DAQ's, alongside the absent-is-not-zero candidate it
+closely resembles.
+
+**And a correction to how that arrival was first read.** This paragraph
+originally called the second arrival *evidence about the class rather than
+a coincidence about the phase*. That claim was later falsified directly.
+Two sessions independently closed the canonical-YAML collection class,
+independently reached the same refusal, by the same argument — and
+independently wrote down the same **wrong reason** for it. Both recorded
+that the dependency-free reader *refuses* a nested sequence. It does not:
+the compact single-element form is silently mistyped, returning a string
+where PyYAML returns a list, with no error on either side. Each half had
+probed a form that does raise, and generalized from it.
+
+So convergence is demoted here from evidence to **a prompt to
+re-measure**. Two authors agreeing shows they share a method, a
+vocabulary, or a blind spot — often all three; where both probed the same
+shape, the second arrival added no coverage at all. What caught it was
+running the two readers against each other on every shape, including the
+ones neither half had probed.
+
+One practice does survive intact, because it rests on coverage rather than
+on agreement: when two independent efforts converge, **union their
+fixtures** rather than choosing one. Neither set subsumed the other, and a
+shape nobody pins is a shape nobody agreed.
+
+Both the arrival and this correction are recorded in
+`architecture/proof_integrity.yaml`, held byte-identical in both
+repositories.
 
 **Where it reaches next.** Any optional field, any union behind a kind
 discriminant, any reserved word — and, one layer up, any representation of
