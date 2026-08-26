@@ -27,6 +27,7 @@ add_library(scl_core STATIC
   src/operation_registry.cpp
   src/op_lj_pairwise.cpp
   src/op_fourier.cpp
+  src/covariance.cpp
   src/least_squares.cpp
   src/op_least_squares.cpp
 )

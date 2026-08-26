@@ -1,0 +1,117 @@
+# THE KALMAN VALIDATION CRITERIA, FIXED BEFORE THE IMPLEMENTATION EXISTS.
+#
+# WHY A PRE-REGISTRATION AND NOT A TEST FILE. Filter validation is the
+# measurement in this project most exposed to being judged after seeing
+# its result: every statistic below has a tolerance, every tolerance can
+# be widened, and a widened tolerance looks exactly like a passing filter.
+# The requirements artifact already says so -- "sample count and tolerance
+# STATED BEFORE running" -- so the numbers are committed here, in an
+# artifact whose git history shows they predate any run, and the eventual
+# test READS them rather than restating them.
+#
+# A test that carries its own thresholds can have them adjusted in the
+# same commit that makes them pass, and the diff looks like tuning. A test
+# that reads them from here cannot: moving a number is a visible edit to a
+# file whose whole stated purpose is that its numbers do not move.
+#
+# STATUS: written before native/src/kalman.cpp exists. If that file exists
+# in this commit, this pre-registration is void and must be reissued.
+# FLOAT FORM. Tolerances are written `1.0e-9`, not `1e-9`. Measured:
+# YAML 1.1's float grammar needs a decimal point AND a signed exponent,
+# so PyYAML reads bare `1e-9` as the STRING '1e-9' while the sibling's
+# reader reads it as a float. A pre-registration whose tolerances are
+# strings on one side and numbers on the other is the implicit-typing
+# defect landing on the numbers it exists to fix in place.
+extends: core@1.0.0
+
+artifact: kalman_validation_preregistration
+owner: scl
+status: pre_registered
+binds: "the validation of kalman_filter_linear, whenever it is implemented"
+
+# ------------------------------------------------------- what is tested --
+#
+# NOT "does the estimate match the truth". Comparing a filtered estimate
+# to simulated ground truth conflates three separate things -- the filter,
+# the model, and the simulator -- and passes when two errors cancel. The
+# requirements artifact names this directly. What is tested instead is the
+# INNOVATION SEQUENCE, which has properties derivable from the filter's
+# own assumptions and checkable without knowing the truth.
+
+the_innovation_sequence:
+  definition: "v_k = z_k - H x_k|k-1, the difference between the measurement and what the filter predicted before seeing it"
+  why_it_is_the_right_subject: "under the filter's own assumptions the innovations are zero-mean, have covariance S_k = H P_k|k-1 H^T + R, and are mutually uncorrelated across time. All three are consequences of the filter being CORRECT for the model it was given, and none requires the true state. A filter that is wrong about its model breaks them in ways that are visible without an oracle."
+
+# -------------------------------------------------- the three statistics --
+
+statistics:
+
+  innovation_mean:
+    tests: "E[v_k] = 0"
+    procedure: "normalised innovation mean over N steps, per component: mu_i = (1/N) sum_k v_k,i / sqrt(S_k,ii)"
+    distribution_under_the_null: "approximately N(0, 1/N) per component"
+    sample_count_N: 2000
+    tolerance: "|mu_i| <= 3.0 / sqrt(N) for every component"
+    tolerance_rationale: "three standard errors. At N = 2000 that is 0.0671. Chosen as a threshold on the sampling distribution, not fitted to an observed value."
+    what_a_failure_means: "a biased filter -- typically a wrong H, a wrong transition, or an unmodelled input"
+
+  innovation_covariance:
+    tests: "Cov[v_k] = S_k, the covariance the filter itself predicts"
+    procedure: "normalised innovation squared, averaged: NIS = (1/N) sum_k v_k^T S_k^-1 v_k"
+    distribution_under_the_null: "N * NIS ~ chi-squared with N*m degrees of freedom, m the measurement dimension; so NIS concentrates on m"
+    sample_count_N: 2000
+    measurement_dimension_m: 2
+    tolerance: "NIS within [m - 3*sqrt(2*m/N), m + 3*sqrt(2*m/N)] = [1.9051, 2.0949] for m = 2, N = 2000"
+    tolerance_rationale: "three standard deviations of the chi-squared mean. Var(NIS) = 2m/N."
+    what_a_failure_means: "NIS above the band = the filter is OVERCONFIDENT, its P or R too small; below = overly conservative. Both are model errors the estimate-vs-truth comparison would hide."
+
+  innovation_whiteness:
+    tests: "E[v_j v_k^T] = 0 for j != k"
+    procedure: "normalised autocorrelation of the scalar normalised innovations at lags 1..L"
+    distribution_under_the_null: "approximately N(0, 1/N) per lag"
+    sample_count_N: 2000
+    lags_L: 10
+    tolerance: "|rho(l)| <= 3.0 / sqrt(N) = 0.0671 for every lag l in 1..L"
+    tolerance_rationale: "three standard errors, same basis as the mean test"
+    what_a_failure_means: "structure the filter did not remove -- the strongest single indicator that the state model is wrong, and invisible to any single-step check"
+    why_it_is_included_despite_being_the_weakest_test: "it is the only one of the three that sees TIME. Mean and covariance are satisfiable by a filter with no memory at all; whiteness is not."
+
+# -------------------------------------------------- the analytic anchors --
+#
+# The statistics above are necessary and not sufficient -- they check
+# consistency, not correctness. These check correctness against closed
+# form, with no simulation involved at all.
+
+analytic_cases:
+  scalar_steady_state_gain:
+    setup: "one-dimensional constant state, F = 1, H = 1, constant Q and R"
+    closed_form: "the steady-state error covariance P solves P = P - P^2/(P + R) + Q, i.e. P^2 - Q P - Q R = 0, so P = (Q + sqrt(Q^2 + 4 Q R)) / 2 and the steady-state gain is K = P / (P + R)"
+    tolerance: 1.0e-9
+    why_it_is_first: "it is the one case where the filter's answer is a number that can be derived by hand, so it distinguishes an implementation error from a modelling one before any statistic is run."
+  zero_process_noise_converges:
+    setup: "Q = 0, constant true state, repeated measurements"
+    closed_form: "P_k = P_0 R / (R + k P_0), so the gain goes to zero as 1/k and the estimate converges to the sample mean"
+    tolerance: 1.0e-9
+  infinite_measurement_noise_ignores_the_measurement:
+    setup: "R very large relative to P"
+    expected: "the gain tends to zero and the estimate follows the prediction -- the filter ignores a measurement it has been told is worthless"
+    tolerance: 1.0e-6
+
+# ----------------------------------------------------- the seed discipline --
+
+determinism:
+  rule: "every stochastic case uses a FIXED, STATED seed, and the seed is part of the recorded configuration."
+  why: "a validation that passes on one seed and fails on another has measured the seed. A stated seed makes the run reproducible; running additional seeds is legitimate and each must be stated, but selecting the seed that passes is not."
+  seeds: 
+    - 20260826
+    - 20260827
+    - 20260828
+  all_three_must_pass: true
+  rationale: "three seeds, all required. One seed cannot distinguish a correct filter from a lucky one; requiring all three to pass means a seed cannot be chosen after the fact."
+
+# ------------------------------------------------------------- the rule --
+
+if_a_criterion_fails:
+  permitted: "diagnose the filter, the model, or the test setup, and fix whichever is actually wrong."
+  forbidden: "widening a tolerance, raising N until the statistic lands inside a band, adding a seed, or reporting the criteria as met with a note that one was close. Any change to a number in this file is a REISSUE, dated, with the reason recorded and the prior value retained."
+  the_reason_this_is_stated: "these are the exact moves that look reasonable at the moment a filter is nearly working, and they are indistinguishable in a diff from having got it right."

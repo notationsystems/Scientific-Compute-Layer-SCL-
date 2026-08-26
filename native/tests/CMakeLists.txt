@@ -1,3 +1,6 @@
 add_executable(scl_native_tests test_lj_pairwise.cpp)
+add_executable(scl_covariance_tests test_covariance.cpp)
+target_link_libraries(scl_covariance_tests PRIVATE scl_core)
+add_test(NAME scl_covariance_tests COMMAND scl_covariance_tests)
 target_link_libraries(scl_native_tests PRIVATE scl_core)
 add_test(NAME scl_native_tests COMMAND scl_native_tests)

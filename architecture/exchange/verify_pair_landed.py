@@ -31,6 +31,7 @@ import sys
 SHARED = (
     "architecture/decisions/2026-08-26-joint-workload-decision.sha256",
     "architecture/decisions/2026-08-26-joint-workload-decision.yaml",
+    "architecture/kalman_validation_preregistration.yaml",
     "architecture/proof_integrity.yaml",
     "architecture/exchange/canonical_yaml.py",
     "architecture/exchange/canonical_yaml.sha256",

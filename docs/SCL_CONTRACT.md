@@ -368,6 +368,57 @@ Enforced by clause 2 of the operation contract
 (`native/include/scl/operation.hpp`), checked for every registered
 operation by `tests/test_operation_registry_contract.py`.
 
+### 6.3 Supplied or asserted: the third axis
+
+§6.1 splits a parameter by **what it changes** — participating fields
+enter `output_identity` and `computation_identity`, annotating ones do
+not. Kalman needs a second, orthogonal question, and the two must not be
+conflated.
+
+A linear filter carries two noise matrices. Both are parameters, both are
+asserted by the caller, and **both participate** — change either and the
+trajectory changes. On §6.1's axis they are indistinguishable. But:
+
+- **R**, the measurement noise covariance, *may be measurement-derived*.
+  An acquisition layer that characterises its instrument can supply it,
+  and then it is traceable to something that was actually measured.
+- **Q**, the process noise covariance, **never is**. There is no
+  measurement of process noise. It states how much the modeller believes
+  the state wanders between observations — a modelling assertion, always.
+
+If both land in `parameters_identity` undifferentiated, the execution
+record cannot answer the question an auditor will actually ask: *was this
+filter's noise model supplied, or assumed?* Two runs with identical
+`parameters_identity` may have one R characterised from a calibration and
+another chosen to make the filter converge, and nothing separates them.
+
+So each noise matrix carries a **provenance discriminant** beside its
+value:
+
+| discriminant | meaning | guarded payload |
+|---|---|---|
+| `asserted` | a modelling choice; no measurement stands behind it | none — a payload here is **refused** |
+| `supplied` | derived from measurement | the identity of the input that supplied it |
+
+Three consequences, none optional:
+
+1. **`Q` may only ever be `asserted`.** `supplied` on Q is a validation
+   fault, not a tolerated oddity — it would claim a measurement that
+   cannot exist.
+2. **The discriminant guards a payload, so clause 2 governs it.** This is
+   exactly the presence-flag shape the operation contract states over: the
+   source-identity bytes must have one encoding when absent, and a payload
+   supplied under `asserted` must be refused rather than accepted and
+   ignored. Not a new rule — the existing one arriving at its next
+   instance, which is how §6.2 said the class would spread.
+3. **The discriminant participates.** `asserted` and `supplied` describe
+   different computations at identical numeric values, because they
+   license different conclusions from the same trajectory. It is not an
+   annotation.
+
+The axes are independent and both are needed: §6.1 asks *does this change
+the numbers*, §6.3 asks *does a measurement stand behind them*.
+
 ## 7. Reproducibility — precisely scoped (Task 5)
 
 | Kind | Claimed? | Evidence |

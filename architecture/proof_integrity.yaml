@@ -57,6 +57,16 @@ instances:
     severity: reported_green_over_the_hole
     arrived_at_independently_by: "the acquisition layer, which proposes it as core vocabulary in architecture/exchange/daq_capabilities.yaml"
 
+  - name: the_repair_that_reproduced_the_defect_it_repaired
+    target: "is a table cell a quantity?"
+    subject: "is the cell one of the three types we wrote down as bad?"
+    what_happened: "a bool cell was found admissible in a design matrix and refused. The refusal was implemented by adding BOOLEAN_IS_NOT_A_QUANTITY to a leaf classifier that already named two forbidden types -- so the fix was a third entry on a denylist. Probed afterwards against fifteen leaf types inside a 2x2 matrix, six were still admitted: None, bytes, a complex number, a Decimal, a Fraction and a set. Each would sit in a covariance entry meaning nothing."
+    repair: "invert to the property -- a leaf must BE a finite real number. The three named reasons survive as SPECIALISATIONS of a refusal already decided, because 'this is a bool' tells a caller more than 'wrong type', but they are no longer the CONDITIONS for one."
+    severity: the_fix_and_the_bug_were_the_same_shape
+    why_this_one_is_the_most_likely_to_recur: "every other instance in this list looks wrong once seen. This one looks RIGHT. The bug was a denylist missing an entry; the fix added the entry. It closed the reported case, passed review, passed its tests, and left the class exactly as open as it found it -- narrower by one. A repair that takes the shape of the defect inherits the defect's blind spot, and inherits the credibility of having been fixed as well."
+    the_question_that_separates_them: "does this repair change the RULE, or extend the LIST? Extending the list is legitimate only when the list IS the rule -- a fault-code vocabulary, a registry of operations. When the list is standing in for a property, the property is the repair."
+    found_by: "applying coverage_specified_by_enumeration's own repair rule to a fix that had already been accepted"
+
   - name: an_enforcement_claim_that_names_a_file_saying_nothing_about_it
     target: "is this invariant enforced?"
     subject: "does the ledger name a test file that exists?"
@@ -104,7 +114,7 @@ coverage_specified_by_enumeration:
   how_to_tell_you_are_in_it: "the check NAMES what it looks at instead of deriving it."
   why_it_is_the_sharpest: "a check specified by enumeration is correct exactly until the world grows an item nobody added to the list, and it fails SILENTLY at that moment -- it reports success, because the thing it enumerates is still fine. No coverage at all leaves a visible hole; coverage-by-enumeration reports green over the hole, and the green is then cited as evidence."
   its_repair_rule_is_adopted_for_the_whole_class: "ASSERT THE PROPERTY, NOT THE ENUMERATION. Sharper than the general diagnostic below and strictly stronger where it applies: adding the missing item fixes one instance, asserting the property fixes the class. The shadow guard follows it -- it refuses any module binding a test name twice, over every module found, rather than checking the files known to have had the problem."
-  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the eight instances below, each measured, not the fact that two authors named it."
+  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the nine instances below, each measured, not the fact that two authors named it."
 
 # ------------------------------------------------------- the pattern --
 
