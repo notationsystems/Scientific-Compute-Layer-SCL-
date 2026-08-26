@@ -8,7 +8,7 @@
 //     offset  4  int32    normalization           0 none, 1 1/N, 2 1/sqrt(N)
 //     offset  8  int32    has_sample_spacing      0 or 1
 //     offset 12  int32    reserved                must be 0
-//     offset 16  float64  sample_spacing_seconds  ignored when has_sample_spacing == 0
+//     offset 16  float64  sample_spacing_seconds  MUST be 0 when has_sample_spacing == 0
 //
 // input:  N * 16 bytes -- N complex samples as (real float64, imag float64)
 // output: N * 16 bytes -- N complex bins,  same layout, k = 0..N-1 ascending
@@ -79,6 +79,20 @@ FourierParameters decode_configuration(const std::vector<uint8_t>& bytes) {
 
     params.has_sample_spacing = (has_spacing == 1);
     params.sample_spacing_seconds = read_double_le(bytes, 16);
+    // CANONICAL ENCODING. When no spacing is supplied, the spacing bytes
+    // MUST be zero. Otherwise two byte-different configurations mean
+    // exactly the same thing -- "no sample spacing" -- while producing
+    // different parameters_identity values, which breaks the premise that
+    // a parameter identity identifies the parameters. Found by the
+    // clause-2 conformance check: garbage in these bytes was accepted and
+    // silently ignored.
+    if (!params.has_sample_spacing && params.sample_spacing_seconds != 0.0) {
+        std::ostringstream os;
+        os << "sample_spacing_seconds must be 0 when has_sample_spacing is 0, got "
+           << params.sample_spacing_seconds
+           << " -- an ignored value would make two identical requests differ in identity";
+        throw OperationValidationError(os.str());
+    }
     return params;
 }
 

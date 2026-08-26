@@ -41,6 +41,13 @@
 //  2. CONFIGURATION DECODER. Fixed, documented byte layout. Rejects any
 //     length but its own. Every field is validated, including reserved
 //     fields, which must be zero so the layout can grow compatibly.
+//     CANONICAL ENCODING: a field that is unused under some other
+//     field's setting must be REFUSED when it carries a value, not
+//     silently ignored. Two byte-different configurations that mean the
+//     same thing would otherwise produce different parameters_identity
+//     values, which breaks the premise that a parameter identity
+//     identifies the parameters. fourier_transform_1d failed exactly this
+//     way until the clause-2 conformance check was written.
 //
 //  3. INPUT DECODER. Documented element size; rejects a payload that is
 //     not a whole number of elements. An empty input is a VALIDATION

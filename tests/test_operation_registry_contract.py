@@ -56,6 +56,15 @@ KNOWN_GOOD = {
     ),
 }
 
+#: Byte offsets of RESERVED int32 fields in each operation's
+#: configuration. Clause 2 requires these to be zero so the layout can
+#: grow compatibly; an empty tuple means the operation declares none.
+RESERVED_OFFSETS = {
+    "lj_pairwise_energy_forces": (),      # three float64s, no reserved words
+    "fourier_transform_1d": (12,),
+    "least_squares": (4, 8, 12),
+}
+
 #: Operation-specific metric keys, so clause 7's "must not emit another
 #: operation's keys" can be checked concretely.
 OPERATION_SPECIFIC_METRICS = {
@@ -110,6 +119,102 @@ def test_clause7_no_operation_emits_another_operations_metrics(cli_path):
                                  if name != operation))
         leaked = foreign.intersection(result.metrics) - OPERATION_SPECIFIC_METRICS[operation]
         assert not leaked, f"{operation} emitted foreign metrics {leaked}"
+
+
+# --- clause 2: configuration decoder ------------------------------------
+
+def test_clause2_every_reserved_field_is_declared(cli_path):
+    """If an operation is added without declaring its reserved offsets,
+    say so rather than skipping the only clause-2 check that matters."""
+    assert sorted(RESERVED_OFFSETS) == sorted(KNOWN_GOOD)
+
+
+def test_clause2_a_non_zero_reserved_field_is_refused(cli_path):
+    """Reserved fields must be ZERO so the layout can grow compatibly. A
+    build that silently ignores them cannot later give them meaning
+    without changing what old requests mean.
+
+    Previously this clause had no dedicated check -- it was exercised only
+    through clause 8's malformed-configuration cases, which assert the
+    fault VOCABULARY is respected rather than that a non-zero reserved
+    field is refused at all."""
+    for operation in _each_operation(cli_path):
+        params, payload = KNOWN_GOOD[operation]
+        for offset in RESERVED_OFFSETS[operation]:
+            mutated = bytearray(params)
+            mutated[offset] = 0x01
+            result = run_scl_request(
+                SCLRequest(operation, "cpu", bytes(mutated), payload), cli_path=cli_path)
+            assert result.status == "halted", (
+                f"{operation} accepted a non-zero reserved field at offset {offset}")
+            assert result.exit_code == 11
+            assert "reserved" in result.detail.lower(), (
+                f"{operation}'s refusal must name the offending field: {result.detail!r}")
+
+
+def test_clause2_an_ignored_configuration_field_is_refused_not_tolerated(cli_path):
+    """The CANONICAL-ENCODING half of clause 2, and it found a real defect
+    the first time it ran.
+
+    `fourier_transform_1d` accepted arbitrary bytes in
+    sample_spacing_seconds whenever has_sample_spacing was 0, and ignored
+    them. Two byte-different configurations therefore meant exactly the
+    same thing -- "no sample spacing" -- while producing DIFFERENT
+    parameters_identity values, which breaks the premise that a parameter
+    identity identifies the parameters. A conditionally-unused field must
+    be refused when it carries a value, not quietly dropped."""
+    from scl.fourier import encode_fourier_configuration
+    import struct
+
+    params = bytearray(encode_fourier_configuration())          # no spacing
+    assert struct.unpack_from("<i", params, 8)[0] == 0, "has_sample_spacing is 0 here"
+    struct.pack_into("<d", params, 16, 0.5)                     # ...but a spacing is present
+
+    _, payload = KNOWN_GOOD["fourier_transform_1d"]
+    result = run_scl_request(
+        SCLRequest("fourier_transform_1d", "cpu", bytes(params), payload), cli_path=cli_path)
+    assert result.status == "halted"
+    assert result.exit_code == 11
+    assert "sample_spacing_seconds must be 0" in result.detail
+
+
+def test_clause2_each_operation_rejects_every_wrong_configuration_length(cli_path):
+    for operation in _each_operation(cli_path):
+        params, payload = KNOWN_GOOD[operation]
+        for length in (0, len(params) - 1, len(params) + 1, len(params) * 2):
+            mutated = (params * 3)[:length]
+            result = run_scl_request(
+                SCLRequest(operation, "cpu", mutated, payload), cli_path=cli_path)
+            if length == len(params):
+                continue
+            assert result.status == "halted", (
+                f"{operation} accepted a {length}-byte configuration")
+            assert result.exit_code == 11
+
+
+# --- clause 3: input decoder --------------------------------------------
+
+def test_clause3_empty_input_is_a_validation_fault_not_an_empty_success(cli_path):
+    """"An empty input is a VALIDATION fault, never a silently-empty
+    success." Previously exercised only through clause 6, which asserts a
+    halted outcome carries no output -- not that an empty input halts."""
+    for operation in _each_operation(cli_path):
+        params, _ = KNOWN_GOOD[operation]
+        result = run_scl_request(SCLRequest(operation, "cpu", params, b""), cli_path=cli_path)
+        assert result.status == "halted", f"{operation} accepted an empty input"
+        assert result.exit_code == 11, f"{operation} used {result.exit_code} for empty input"
+        assert result.output is None
+
+
+def test_clause3_a_partial_element_is_refused(cli_path):
+    """A payload that is not a whole number of elements. Truncating the
+    known-good input by one byte can never be a valid request."""
+    for operation in _each_operation(cli_path):
+        params, payload = KNOWN_GOOD[operation]
+        result = run_scl_request(
+            SCLRequest(operation, "cpu", params, payload[:-1]), cli_path=cli_path)
+        assert result.status == "halted", f"{operation} accepted a truncated input"
+        assert result.exit_code == 11
 
 
 # --- clause 8: fault vocabulary -----------------------------------------
