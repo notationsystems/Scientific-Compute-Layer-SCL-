@@ -82,6 +82,39 @@
 // and tests/test_least_squares_row_dependence.py pins it by showing the
 // diagnostics silent rather than asserting they would be.
 // ---------------------------------------------------------------------
+//
+// CORRELATED ERRORS: THE CALLER WHITENS, AND THAT IS EXACT. Recorded
+// 2026-08-26 beside the boundary above, because they are the same family
+// -- what the caller must establish before calling -- and because the
+// acquisition layer can now MEASURE a correlation (its
+// science/replicate_pairing.py recovers it from paired replicate runs),
+// so the question of what to do with one stopped being hypothetical.
+//
+// The wire carries WEIGHTS, one per row: a diagonal. No off-diagonal
+// term is expressible, so a covariance cannot be handed to this
+// operation. It does not need to be. For a known Sigma = L L^T, the
+// caller solves L X~ = X and L y~ = y and fits the whitened problem
+// ordinarily; the result IS the generalized least-squares estimate, not
+// an approximation to it.
+//
+// MEASURED, through the CLI, on a 3x2 problem with corr = 0.8 between
+// two of the errors:
+//
+//     pre-whitened through this operation   2.119565   3.069565
+//     analytic GLS, computed independently  2.119565   3.069565
+//         agreement                         8.9e-16
+//     the same fit with weights only,
+//     the correlation ignored               2.116667   3.066667
+//         error                             2.9e-03
+//
+// Note where that error lands: in the COEFFICIENTS, not merely in their
+// uncertainties. Ignoring a correlation moves the answer.
+//
+// So no extension is proposed. What was missing is that nothing said
+// this, and a caller holding a covariance had no way to learn from the
+// operation that whitening is the route. tests/test_least_squares_
+// correlated_errors.py measures the agreement rather than asserting it.
+// ---------------------------------------------------------------------
 
 #include <cstddef>
 #include <string>
