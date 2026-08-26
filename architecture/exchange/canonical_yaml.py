@@ -48,21 +48,43 @@ in the acquisition repository for the full measurement.
 
 WHY A SEQUENCE INSIDE A SEQUENCE IS REFUSED. The always-quote rule closed
 the SCALAR half of the "two encodings, one meaning" class. The COLLECTION
-half was measured afterwards and had two holes, both loud rather than
-silent, and neither reached by any live artifact at the time:
+half was measured afterwards and had two holes, neither reached by any
+live artifact at the time:
 
   * an empty mapping or sequence nested INSIDE a sequence raised
     "unsupported scalar type" -- the emitter could not represent a legal
-    document shape. Fixed: it emits `- {}` / `- []`.
-  * a sequence directly inside a sequence emits the block form `- - 1`,
-    which PyYAML reads correctly and this project's dependency-free reader
-    REFUSES with YamlSubsetError. One repository able to read an artifact
-    the other cannot is the same failure as two repositories typing a
-    scalar differently, so it is closed the same way: refuse the form at
-    the WRITER rather than tolerating a shape that does not round-trip
-    everywhere. Wrap the inner sequence in a mapping with a named key --
-    which is better practice anyway, since a bare nested sequence gives
-    its elements no name.
+    document shape. Loud, so never silent. Fixed: it emits `- {}` / `- []`.
+  * a sequence directly inside a sequence, which is SILENT in the shape a
+    compact emitter actually produces. See the measurement table at the
+    refusal site in `_emit`: `- - 1` returns [[1]] from PyYAML and the
+    STRING "- 1" from the dependency-free reader, with no error from
+    either. The multi-element and expanded forms do raise, which is how
+    both halves of this reissue first recorded the whole class as a loud
+    refusal -- they probed those shapes. Same bytes, two values, no error
+    is exactly what pinning an encoding exists to prevent, so it is closed
+    the way the scalar rule was: refuse at the WRITER. Wrap the inner
+    sequence in a mapping with a named key -- better practice anyway,
+    since a bare nested sequence gives its elements no name.
+
+THE RULE THAT DECIDES WHICH SIDE TO FIX. Both halves of an encoding defect
+look alike from a distance and take OPPOSITE repairs, so the question is
+asked explicitly rather than by instinct:
+
+    Does a form exist that both sides read identically?
+
+  * NO  -> refuse at the WRITER. The bytes genuinely carry two meanings
+           and no rendering escapes that, so the only fix is not to emit
+           them. The scalar class and this collection class are both here.
+  * YES -> fix the SIDE THAT IS WRONG. The bytes have one correct meaning
+           and one reader is non-conformant. Repairing that reader is not
+           the reader-side normalization this file forbids: that rule is
+           about RELOCATING an ambiguity, and here there is no ambiguity
+           to relocate. The escape class is here -- these five escapes
+           have one meaning under YAML 1.2, PyYAML already returned it,
+           and the dependency-free reader simply did not decode them.
+
+Reaching for "always fix the emitter" without asking that question is how
+a non-conformant reader gets preserved behind a writer-side workaround.
 
 ONE DOCUMENTED EXCEPTION to "block style only": an empty mapping or
 sequence has no block form in YAML, so `{}` / `[]` are emitted. Prefer
