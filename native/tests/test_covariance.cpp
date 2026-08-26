@@ -217,6 +217,25 @@ void test_the_verdict_does_not_depend_on_the_unit() {
           scl::CovarianceFault::kNotSymmetric);
     CHECK(scl::validate_covariance(bad_mm, 2, 2, p).fault ==
           scl::CovarianceFault::kNotSymmetric);
+
+    // THE SAME DISCRIMINATION FOR THE PSD BUDGET, and it was MISSING until
+    // the mutation that removed the relative scaling from psd_budget
+    // survived all 48 checks. The symmetry half had already been rewritten
+    // for exactly this; the PSD half had not, and the omission was
+    // predicted before it was measured.
+    //
+    // [[a, b], [b, a]] has eigenvalues a +/- b. At scale 1e6 with
+    // lambda_min = -1e-5, the relative budget is 1e-10 * 2e6 = 2e-4 and
+    // admits it; an absolute 1e-10 budget refuses a covariance that is
+    // negative only by roundoff at that scale.
+    const double big = 1.0e6;
+    const std::vector<double> grazing_large = {big, big + 1e-5, big + 1e-5, big};
+    const scl::CovarianceReport gl =
+        scl::validate_covariance(grazing_large, 2, 2, p);
+    CHECK(gl.ok());
+    CHECK(gl.smallest_eigenvalue < 0.0);          // genuinely negative
+    CHECK(gl.smallest_eigenvalue > -1e-4);        // but only by roundoff at this scale
+    CHECK(std::fabs(gl.smallest_eigenvalue) > 1e-10);  // and far above an ABSOLUTE budget
 }
 
 // --- THE SPECTRUM IS REPORTED, NOT JUST TESTED ---------------------------

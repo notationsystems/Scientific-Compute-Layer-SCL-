@@ -24,6 +24,34 @@
 # defect landing on the numbers it exists to fix in place.
 extends: core@1.0.0
 
+# MACHINE-READABLE FORM, added before the first run and changing NO number.
+#
+# The tolerances above are stated in prose, which a harness cannot read --
+# so a harness would have to RESTATE them, and a restated threshold can be
+# edited in the commit that makes it pass. That is precisely what this
+# artifact exists to prevent, so the same numbers are given here in a form
+# the harness consumes directly.
+#
+# ONE multiplier drives all three statistics, because all three are "three
+# standard errors" and three numbers that must agree are three numbers that
+# can drift apart. The harness derives each band from it:
+#
+#   innovation mean   |mu_i|  <= sigma_multiplier / sqrt(N)
+#   NIS               within  m +/- sigma_multiplier * sqrt(2m/N)
+#   whiteness         |rho(l)| <= sigma_multiplier / sqrt(N)
+#
+# Recorded as an ADDITION under this file's own reissue rule: no threshold
+# moved, and the derived values are asserted equal to the prose above by
+# tests/test_kalman_validation.py before any statistic is compared.
+machine_readable:
+  sigma_multiplier: 3.0
+  sample_count_N: 2000
+  measurement_dimension_m: 2
+  lags_L: 10
+  derived_mean_and_whiteness_tolerance: 0.0670820393249937
+  derived_nis_lower: 1.8658359213500126
+  derived_nis_upper: 2.1341640786499876
+
 artifact: kalman_validation_preregistration
 owner: scl
 status: pre_registered
@@ -61,7 +89,9 @@ statistics:
     distribution_under_the_null: "N * NIS ~ chi-squared with N*m degrees of freedom, m the measurement dimension; so NIS concentrates on m"
     sample_count_N: 2000
     measurement_dimension_m: 2
-    tolerance: "NIS within [m - 3*sqrt(2*m/N), m + 3*sqrt(2*m/N)] = [1.9051, 2.0949] for m = 2, N = 2000"
+    tolerance: "NIS within [m - 3*sqrt(2*m/N), m + 3*sqrt(2*m/N)] = [1.8658, 2.1342] for m = 2, N = 2000"
+    reissued: "2026-08-26, BEFORE any run. The band was first written [1.9051, 2.0949], which is m +/- 3*sqrt(m/N) -- the factor of 2 in the chi-squared variance was dropped. Var(chi2(m)) = 2m, so Var(NIS) = 2m/N and the half-width is 3*sqrt(2*m/N) = 0.13416, not 0.09487. PRIOR VALUE RETAINED: [1.9051, 2.0949]."
+    reissued_widens_the_band: "yes, by a factor of sqrt(2), and that is the direction that should attract suspicion. Two things bound it: no Kalman run had occurred when this was corrected -- the harness did not exist -- and the corrected value is DERIVED in the machine_readable block from one multiplier rather than typed, so it is checked against the formula rather than against a result. The error was found by computing the derived form and finding it disagreed with the prose."
     tolerance_rationale: "three standard deviations of the chi-squared mean. Var(NIS) = 2m/N."
     what_a_failure_means: "NIS above the band = the filter is OVERCONFIDENT, its P or R too small; below = overly conservative. Both are model errors the estimate-vs-truth comparison would hide."
 

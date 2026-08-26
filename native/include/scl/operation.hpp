@@ -215,5 +215,6 @@ std::vector<std::string> supported_operation_names();
 OperationOutcome run_lj_pairwise_energy_forces(const OperationRequest& request);
 OperationOutcome run_fourier_transform_1d(const OperationRequest& request);
 OperationOutcome run_least_squares(const OperationRequest& request);
+OperationOutcome run_kalman_filter_linear(const OperationRequest& request);
 
 }  // namespace scl

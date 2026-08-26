@@ -27,6 +27,10 @@ from scl.client import (
     run_scl_request,
 )
 from scl.fourier import encode_fourier_configuration, encode_real_signal
+from scl.kalman import (
+    encode_kalman_configuration,
+    encode_kalman_input,
+)
 from scl.least_squares import (
     encode_least_squares_configuration,
     encode_least_squares_input,
@@ -54,6 +58,19 @@ KNOWN_GOOD = {
         encode_least_squares_configuration(),
         encode_least_squares_input([[1.0, 1.0], [1.0, 2.0], [1.0, 3.0]], [2.0, 3.0, 4.0]),
     ),
+    "kalman_filter_linear": (
+        encode_kalman_configuration(
+            transition=[[1.0, 0.1], [0.0, 1.0]],
+            observation=[[1.0, 0.0], [0.0, 1.0]],
+            process_noise=[[0.01, 0.0], [0.0, 0.04]],
+            measurement_noise=[[0.25, 0.0], [0.0, 0.16]],
+        ),
+        encode_kalman_input(
+            initial_state=[0.0, 0.0],
+            initial_covariance=[[1.0, 0.0], [0.0, 1.0]],
+            measurements=[[0.1, 0.9], [0.2, 1.1], [0.35, 0.95]],
+        ),
+    ),
 }
 
 #: Byte offsets of RESERVED int32 fields in each operation's
@@ -63,6 +80,7 @@ RESERVED_OFFSETS = {
     "lj_pairwise_energy_forces": (),      # three float64s, no reserved words
     "fourier_transform_1d": (12,),
     "least_squares": (4, 8, 12),
+    "kalman_filter_linear": (16, 20),
 }
 
 #: Operation-specific metric keys, so clause 7's "must not emit another
@@ -73,6 +91,9 @@ OPERATION_SPECIFIC_METRICS = {
     "least_squares": {"n_rows", "n_cols", "condition_number", "effective_rank",
                        "jacobi_sweeps", "smallest_singular_value",
                        "largest_singular_value"},
+    "kalman_filter_linear": {"state_dimension", "measurement_dimension", "steps",
+                             "smallest_posterior_eigenvalue",
+                             "measurement_noise_is_supplied"},
 }
 
 

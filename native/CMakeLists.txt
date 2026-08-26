@@ -28,8 +28,10 @@ add_library(scl_core STATIC
   src/op_lj_pairwise.cpp
   src/op_fourier.cpp
   src/covariance.cpp
+  src/kalman.cpp
   src/least_squares.cpp
   src/op_least_squares.cpp
+  src/op_kalman.cpp
 )
 target_include_directories(scl_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # Operation modules and the CUDA backends include "backends/cuda/..."
