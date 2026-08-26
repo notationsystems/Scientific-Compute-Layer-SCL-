@@ -8,6 +8,7 @@
 // separate an implementation error from a modelling one before any
 // statistic is run.
 
+#include "scl/covariance.hpp"
 #include "scl/kalman.hpp"
 
 #include <cmath>
@@ -176,41 +177,159 @@ void test_the_contract_faults() {
     CHECK(accepted);
 }
 
-// --- THE JOSEPH FORM IS ENFORCED, NOT MERELY CHOSEN ----------------------
+// --- THE COVARIANCE UPDATE'S CONTRACT, STATED OVER ANY GAIN --------------
 //
-// Replacing Joseph with the short form P = (I - K H) P survived every
-// other test here, because none of them ran a regime where the two
-// differ. Measured: in benign conditions they are bit-identical; with a
-// diffuse prior and a near-exact measurement the short form drives
-// lambda_min to EXACTLY ZERO -- the covariance goes singular -- while
-// Joseph retains a small positive value.
+// THE FIRST VERSION OF THIS TEST WAS WEAK AND IS REPLACED. It asserted
+// that lambda_min stays strictly positive in one extreme regime -- which
+// worked, but only because the short form underflowed to exactly 0.0
+// there. That is a discriminator that happens to fire, not the property.
+// Re-measured on a 3-state model at optimal K, the two forms are
+// IDENTICAL to every printed digit, so the old test was pinning an
+// accident of underflow.
 //
-// A singular P means the filter believes it knows one direction of the
-// state perfectly; the gain in that direction is then identically zero and
-// no later measurement can correct it. Silent and permanent.
-void test_the_joseph_form_keeps_the_covariance_nonsingular() {
-    const std::size_t n = 2, steps = 5000;
-    scl::KalmanProblem p;
-    p.state_dimension = n;
-    p.measurement_dimension = 1;
-    p.transition = {1.0, 1.0,
-                    0.0, 1.0};
-    p.observation = {1.0, 0.0};
-    p.process_noise.dimension = n;
-    p.process_noise.matrix = {0.0, 0.0, 0.0, 0.0};      // q = 0
-    p.measurement_noise.dimension = 1;
-    p.measurement_noise.matrix = {1e-16};               // near-exact measurement
-    p.initial_state = {0.0, 0.0};
-    p.initial_covariance = {1e10, 0.0, 0.0, 1e10};      // diffuse prior
-    p.steps = steps;
-    p.measurements.assign(steps, 0.0);
+// The real guarantee is:
+//
+//     FOR ANY K, the result is a valid covariance whenever P_pred is.
+//
+// Joseph holds it; (I - K H) P holds it only when K is exactly optimal.
+// Stated over the property rather than over the implementation: a later
+// equivalent form is free to replace Joseph, and this test should still
+// pass. It does NOT assert "Joseph is used".
+//
+// Judged by validate_covariance -- this project's own gate -- rather than
+// by a threshold invented here.
+void test_the_covariance_update_holds_for_any_gain() {
+    const std::size_t n = 3, m = 1;
+    const std::vector<double> H = {1.0, 0.0, 0.0};
+    const std::vector<double> R = {0.25};
+    const std::vector<double> P_pred = {4.0, 1.0, 0.5,
+                                        1.0, 3.0, 0.25,
+                                        0.5, 0.25, 2.0};
+    const scl::CovarianceParameters cp;
+    CHECK(scl::validate_covariance(P_pred, n, n, cp).ok());   // the premise
 
-    const scl::KalmanResult r = scl::run_kalman_filter(p, scl::KalmanParameters{});
+    // the optimal gain for this P_pred, computed here rather than taken
+    // from the filter, so the test does not inherit what it is checking
+    const double S = P_pred[0] + R[0];
+    const std::vector<double> K_opt = {P_pred[0] / S, P_pred[3] / S, P_pred[6] / S};
 
-    // The discriminating assertion: STRICTLY positive. The short form
-    // reaches exactly 0.0 here; Joseph holds ~2.4e-27.
-    CHECK(r.smallest_posterior_eigenvalue > 0.0);
-    CHECK(r.smallest_posterior_eigenvalue < 1e-20);   // and it IS this regime
+    // THE OPTIMAL GAIN IS THE EASY CASE, and every update form passes it.
+    CHECK(scl::validate_covariance(
+              scl::covariance_update(P_pred, K_opt, H, R, n, m), n, n, cp).ok());
+
+    // ANY OTHER GAIN is the contract. Scaled, zero, doubled, negative --
+    // a suboptimal gain is a worse ESTIMATE, never an invalid covariance.
+    for (double factor : {0.0, 0.5, 0.999, 1.001, 1.5, 2.0, -1.0, 10.0}) {
+        std::vector<double> K = K_opt;
+        for (double& k : K) k *= factor;
+        const std::vector<double> P = scl::covariance_update(P_pred, K, H, R, n, m);
+        const scl::CovarianceReport rep = scl::validate_covariance(P, n, n, cp);
+        CHECK(rep.ok());
+        if (!rep.ok()) std::fprintf(stderr, "  gain factor %g: %s\n", factor,
+                                    rep.detail.c_str());
+    }
+}
+
+// The same property under ITERATION, which is where a defect accumulates
+// rather than appearing at once. A gain perturbed by 1e-3 drives the short
+// form to lambda_min = -1.994e+06 over 2000 steps; the contract above must
+// keep the covariance inside the gate for the whole run.
+void test_the_contract_survives_two_thousand_perturbed_steps() {
+    const std::size_t n = 3, m = 1;
+    const std::vector<double> H = {1.0, 0.0, 0.0};
+    const std::vector<double> R = {0.25};
+    const std::vector<double> F = {1.0, 1.0, 0.5,
+                                   0.0, 1.0, 1.0,
+                                   0.0, 0.0, 1.0};
+    std::vector<double> P(n * n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) P[i * n + i] = 1e8;
+    const scl::CovarianceParameters cp;
+
+    double worst = 1e300;
+    for (int step = 0; step < 2000; ++step) {
+        // predict, with a small Q so the recursion does not degenerate
+        std::vector<double> Pp(n * n, 0.0);
+        for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t j = 0; j < n; ++j)
+                for (std::size_t a = 0; a < n; ++a)
+                    for (std::size_t b = 0; b < n; ++b)
+                        Pp[i * n + j] += F[i * n + a] * P[a * n + b] * F[j * n + b];
+        for (std::size_t i = 0; i < n; ++i) Pp[i * n + i] += 0.01;
+
+        const double S = Pp[0] + R[0];
+        // DELIBERATELY SUBOPTIMAL by 1e-3 -- the regime the operation
+        // itself cannot reach, and exactly why this is tested here on the
+        // function rather than through the operation.
+        std::vector<double> K = {Pp[0] / S * 1.001, Pp[3] / S * 1.001, Pp[6] / S * 1.001};
+        P = scl::covariance_update(Pp, K, H, R, n, m);
+
+        const scl::CovarianceReport rep = scl::validate_covariance(P, n, n, cp);
+        CHECK(rep.ok());
+        if (!rep.ok()) {
+            std::fprintf(stderr, "  step %d: %s\n", step, rep.detail.c_str());
+            break;
+        }
+        worst = std::min(worst, rep.smallest_eigenvalue);
+    }
+    CHECK(worst > 0.0);
+}
+
+// --- AND THE SAME CONTRACT AT THE OPTIMAL GAIN, WHICH IS A DIFFERENT
+// --- REGIME AND CATCHES A DIFFERENT MECHANISM.
+//
+// TWO MECHANISMS, TWO REGIMES, and this was found by mutation rather than
+// by design. Removing the explicit symmetrisation survived the perturbed
+// -gain test above: with a suboptimal gain P stays large, so the RELATIVE
+// symmetry budget (1e-10 x scale) is loose and roundoff asymmetry fits
+// inside it.
+//
+// At the OPTIMAL gain the covariance converges to small values, the budget
+// tightens with it, and asymmetry of 1.41e-08 is refused. Measured both
+// ways through the real function:
+//
+//     with symmetrisation      max_asym 0.000e+00   accepted
+//     without                  max_asym 1.411e-08   NOT-SYMMETRIC
+//
+// So Joseph and the symmetrisation are independent: Joseph holds PSD under
+// any gain, symmetrisation holds symmetry under the optimal one, and
+// neither substitutes for the other. Stated as the same property -- the
+// result is a valid covariance -- in the regime that can see it.
+void test_the_contract_also_holds_at_the_optimal_gain_over_many_steps() {
+    const std::size_t n = 3, m = 1;
+    const std::vector<double> H = {1.0, 0.0, 0.0};
+    const std::vector<double> R = {0.25};
+    const std::vector<double> F = {1.0, 1.0, 0.5,
+                                   0.0, 1.0, 1.0,
+                                   0.0, 0.0, 1.0};
+    std::vector<double> P(n * n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) P[i * n + i] = 1e8;
+    const scl::CovarianceParameters cp;
+
+    double worst_asymmetry = 0.0;
+    for (int step = 0; step < 2000; ++step) {
+        std::vector<double> Pp(n * n, 0.0);
+        for (std::size_t i = 0; i < n; ++i)
+            for (std::size_t j = 0; j < n; ++j)
+                for (std::size_t a = 0; a < n; ++a)
+                    for (std::size_t b = 0; b < n; ++b)
+                        Pp[i * n + j] += F[i * n + a] * P[a * n + b] * F[j * n + b];
+        for (std::size_t i = 0; i < n; ++i) Pp[i * n + i] += 0.01;
+
+        const double S = Pp[0] + R[0];
+        const std::vector<double> K = {Pp[0] / S, Pp[3] / S, Pp[6] / S};   // OPTIMAL
+        P = scl::covariance_update(Pp, K, H, R, n, m);
+
+        const scl::CovarianceReport rep = scl::validate_covariance(P, n, n, cp);
+        CHECK(rep.ok());
+        if (!rep.ok()) {
+            std::fprintf(stderr, "  optimal-gain step %d: %s\n", step, rep.detail.c_str());
+            break;
+        }
+        worst_asymmetry = std::max(worst_asymmetry, rep.max_asymmetry);
+    }
+    // exactly symmetric, not merely within budget -- the mechanism is a
+    // forced average, so anything else means it did not run
+    CHECK(worst_asymmetry == 0.0);
 }
 
 }  // namespace
@@ -220,7 +339,9 @@ int main() {
     test_zero_process_noise_converges_as_one_over_k();
     test_zero_process_noise_estimate_is_the_sample_mean();
     test_a_worthless_measurement_is_ignored();
-    test_the_joseph_form_keeps_the_covariance_nonsingular();
+    test_the_covariance_update_holds_for_any_gain();
+    test_the_contract_survives_two_thousand_perturbed_steps();
+    test_the_contract_also_holds_at_the_optimal_gain_over_many_steps();
     test_the_contract_faults();
     std::printf("kalman analytic: %d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
