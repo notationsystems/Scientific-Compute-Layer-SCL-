@@ -86,6 +86,18 @@ instances:
     the_distinction_the_check_had_to_preserve: "a superseded status is not automatically a defect -- this pair deliberately retains dated measurements. So a superseded status RETAINED WITH THE CURRENT ONE STATED BESIDE IT passes, and a superseded status STANDING ALONE fails. Both are expressible and only one is a defect."
     severity: two_corrections_behind_with_every_suite_green
 
+  - name: the_design_of_the_measurement_forced_its_answer
+    target: "what is the correlation between these two quantities?"
+    subject: "what happens to two smooth functions of one number when you vary the number?"
+    what_happened: "gap 2's direction turns on rho = corr(ln Mn, ln Mw), so a GPC forward model was built and rho measured under each error mechanism. Three of the four came back at +1.0000 -- calibration offset, calibration slope, baseline. The number is correct and it is not evidence: each of those mechanisms is ONE SCALAR PARAMETER, so ln Mn and ln Mw are two smooth functions of one number and their correlation is +-1 to first order BEFORE ANY CHEMISTRY ENTERS."
+    what_makes_it_dangerous_rather_than_merely_wrong: "it agreed with the hypothesis. The expectation was that rho is high because the moments share a chromatogram, and the degenerate design returned exactly that, at four decimal places, four times. A wrong answer that contradicts you gets investigated; a forced answer that confirms you gets published."
+    how_it_was_caught: "the fourth mechanism -- per-slice detector noise, 800 independent parameters -- returned 0.9625 rather than 1.0000. One mechanism differing from the others by its PARAMETER COUNT rather than by its physics is the tell. The three that agreed were the three with one degree of freedom."
+    the_repair_is_not_a_better_model: "it is counting the degrees of freedom in the PERTURBATION before reading the correlation out of it. The conclusion was then rebuilt on the single non-degenerate mechanism, which is also the one least favourable to it -- and the finding survived, at 0.96 against a crossover of 0.71."
+    the_general_form: "A DESIGN WITH FEWER FREE PARAMETERS THAN THE RELATION IT MEASURES RETURNS THE RELATION IT WAS BUILT WITH. Before believing a measured dependence, count the independent inputs the measurement actually varied: k inputs cannot exhibit more than k dimensions of variation, so any relation of higher order is supplied by the design and not by the system. A correlation from a one-parameter sweep, a rank from a rank-one perturbation, a covariance from a scalar knob."
+    the_diagnostic: "vary the parameter count, not the parameter. If the answer moves when you add independent inputs and the physics has not changed, the earlier answer was the design talking."
+    severity: a_confirming_number_at_four_decimal_places_that_no_experiment_produced
+    found_by: "noticing that the one mechanism which disagreed differed from the others in parameter count rather than in physics"
+
   - name: the_aggregate_was_counted_as_evidence_for_each_of_its_members
     target: "how much evidence is there for THIS item individually?"
     subject: "does this item's token appear on a line?"
@@ -313,7 +325,7 @@ coverage_specified_by_enumeration:
   how_to_tell_you_are_in_it: "the check NAMES what it looks at instead of deriving it."
   why_it_is_the_sharpest: "a check specified by enumeration is correct exactly until the world grows an item nobody added to the list, and it fails SILENTLY at that moment -- it reports success, because the thing it enumerates is still fine. No coverage at all leaves a visible hole; coverage-by-enumeration reports green over the hole, and the green is then cited as evidence."
   its_repair_rule_is_adopted_for_the_whole_class: "ASSERT THE PROPERTY, NOT THE ENUMERATION. Sharper than the general diagnostic below and strictly stronger where it applies: adding the missing item fixes one instance, asserting the property fixes the class. The shadow guard follows it -- it refuses any module binding a test name twice, over every module found, rather than checking the files known to have had the problem."
-  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 22 instances below, each measured, not the fact that two authors named it."
+  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 23 instances below, each measured, not the fact that two authors named it."
 
 # ---------------------------------------------- the predictive tools --
 #
