@@ -77,23 +77,53 @@ def test_ambiguous_strings_survive_as_strings(text):
 def test_keys_are_sorted_at_every_level():
     document = {"b": {"z": 1, "a": 2}, "a": [{"beta": 1, "alpha": 2}]}
     lines = cy.canonical_dump(document).splitlines()
-    assert lines[0].startswith("a:")
-    assert "  - alpha: 2" in lines          # sorted inside a sequence entry
+    assert lines[0].startswith('"a":')
+    assert '  - "alpha": 2' in lines        # sorted inside a sequence entry
     nested = [ln.strip() for ln in lines]
-    assert nested.index("a: 2") < nested.index("z: 1")
+    assert nested.index('"a": 2') < nested.index('"z": 1')
     assert yaml.safe_load(cy.canonical_dump(document)) == document
 
 
-def test_single_letter_y_and_n_keys_are_quoted_conservatively():
-    """Deliberate over-quoting. YAML 1.1 resolves bare `y`/`n` as booleans
-    and implementations disagree on whether to honour that (PyYAML does
-    not; other parsers do). Over-quoting always round-trips; under-quoting
-    silently turns a key into `True`/`False` in a content-addressed
-    artifact, so the ambiguous case is quoted rather than gambled on."""
-    document = {"n": 1, "y": 2}
+def test_every_string_is_quoted_values_and_keys_alike():
+    """The corrected rule. "Quote only where required" was the DEFECT:
+    YAML implicit typing lets two conformant parsers agree on the bytes and
+    disagree on a scalar's TYPE, so a byte-identical artifact could
+    hash-bind a different typed structure on each side. Unconditional
+    quoting closes the class; the previous rule closed six known cases and
+    left the rest passing incidentally."""
+    document = {"n": 1, "y": 2, "plain": "unremarkable"}
     text = cy.canonical_dump(document)
     assert '"n": 1' in text and '"y": 2' in text
+    assert '"plain": "unremarkable"' in text, "even an unambiguous string is quoted"
     assert yaml.safe_load(text) == document
+
+
+TRAP_SCALARS = [
+    "2026-08-25", "2026-08-25T12:00:00Z", "1:30:00", "0x1F", ".inf", ".nan",
+    "yes", "no", "on", "off", "null", "~", "007", "0o777", "+5", "1_000", "True",
+]
+
+
+@pytest.mark.parametrize("scalar", TRAP_SCALARS)
+def test_implicit_typing_traps_survive_as_strings(scalar):
+    """The six measured divergences AND the ones that used to pass
+    incidentally. The incidental passes are pinned deliberately: they are
+    the ones that regress silently on a parser upgrade, because nothing
+    was holding them."""
+    for document in ({"v": scalar}, {scalar: "v"}):
+        parsed = yaml.safe_load(cy.canonical_dump(document))
+        assert isinstance(next(iter(parsed)), str), f"{scalar!r} as a KEY changed type"
+        assert parsed == document, f"{scalar!r} did not survive as a string"
+
+
+def test_the_fixture_pins_the_trap_class_itself():
+    """Pinned in the SHARED fixture, so the agreement check between the two
+    repositories exercises the class rather than either side's tests."""
+    traps = cy.FIXTURE["implicit_typing_traps"]
+    assert set(traps.values()) >= set(TRAP_SCALARS)
+    reparsed = yaml.safe_load(cy.canonical_dump(cy.FIXTURE))["implicit_typing_traps"]
+    assert all(isinstance(v, str) for v in reparsed.values())
+    assert reparsed == traps
 
 
 def test_non_finite_floats_are_refused():

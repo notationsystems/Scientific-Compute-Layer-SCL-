@@ -1,425 +1,425 @@
-artifact: scl_requirements
-canonicalization:
-  anchors_aliases: forbidden
-  encoding: UTF-8, LF line endings, single trailing newline
-  floats: shortest round-trip repr; exponent form only when |x| < 1e-4 or |x| >= 1e16, and then always with a decimal point in the mantissa and an explicit exponent sign so the value round-trips as a float under YAML 1.1 as well as 1.2
-  hash: sha256 over the serialized bytes
-  implementation: architecture/exchange/canonical_yaml.py
-  keys: sorted lexicographically at every level
-  reference_format: sha256:<hex>
-  serialization: YAML 1.2, block style only; {} and [] are the one documented exception, since empty collections have no block form
-  shared_fixture: architecture/exchange/canonicalization_fixture.yaml
-  strings: double-quoted only where plain style would be unsafe or ambiguous
-contains_workload_selection: false
-core_vocabulary_candidates:
-  absent_is_not_zero:
-    counter_consideration: Three instances is not many, and each layer's absence means something slightly different (unmeasured, not-applicable, not-supplied). A premature unification could collapse distinctions that are worth keeping apart.
-    observation: "The same distinction has now been drawn independently at three layers: uncertainty_kind=absent in the evidence vocabulary; an operation that emits no n_particles metric rather than n_particles=0 (operation contract clause 7); and an absent sample spacing that is not dt=1 (identity contract section 6.1 clause 4). None of the three was derived from the others."
-    reading: Three independent arrivals at one distinction is mild evidence that ABSENT belongs in the shared core vocabulary as a first-class value rather than being re-specified per layer. Recorded as an observation for the joint decision to weigh; SCL does not own the core vocabulary and is not asserting the change.
-    status: CANDIDATE_ONLY_NOT_PROPOSED
-cuda_libraries_present:
-  cublas: present -- /usr/lib/x86_64-linux-gnu/libcublas.so
-  cufft: present and already linked by the fourier_transform_1d CUDA backend
-  cusolver: present -- /usr/lib/x86_64-linux-gnu/libcusolver.so
-  note: presence is a BUILD fact only. No CUDA device is visible in this environment (cudaGetDeviceCount()==0, nvmlInit_v2()==NVML_ERROR_DRIVER_NOT_LOADED), so no GPU numerical, determinism, performance or crossover claim is made for any backend.
-cuda_state:
-  compiled: true
-  gpu_executed: false
-  linked: true
-  runtime_loaded: true
-daq_execution_record_finding:
-  consequence: Section 16 as written would place a second ExecutionRecord BESIDE the existing one, which is the arrangement DAQ's own file rules out. Absorption and coexistence are different designs and the choice between them belongs to the joint decision, not to either repository alone.
-  daq_s_own_stated_position: "DAQ's file states its integration_dependency as: canonical for DAF acquisition only; a broader unified substrate that later grows its own execution-record contract should absorb this one, not sit beside it."
-  finding: The joint prompt's section 16 specifies an ExecutionRecord carrying computation-shaped fields (backend, backend_version, hardware, seed, verification_status, computation_identity). DAQ's architecture/execution_record.yaml already defines a record of the same name with scope=daf_acquisition_only and owner=daf, keyed on operation_id=H(plan_id, source_id, parameters, mode), whose fields are acquisition-shaped (adapter_id, adapter_version, artifact_ids, version_ids, admission_failure_count, outcome, input/output_fingerprint, parent_execution_id).
-  measured_basis: Read directly from DAQ's committed architecture/execution_record.yaml. None of section 16's computation fields appear in it; the two field sets are disjoint apart from the record's name.
-  scl_position: SCL raises this and does not resolve it. SCL has no ExecutionRecord of its own and is not proposing one; adding a second identity or record system is exactly what the architecture forbids.
-  status: RAISED_UNRESOLVED
-  why_it_matters: The joint decision record is bound to these artifacts by hash. If the two repositories write it against two different contracts that share a name, the divergence is invisible in the hashes and surfaces at wiring time instead.
-extends: core@1.0.0
-generated_by: architecture/exchange/build_scl_requirements.py
-identity_model:
-  annotating_vs_participating_parameters: "Every configuration field is either PARTICIPATING (its value is read by the mathematics, so changing it changes the output bytes) or ANNOTATING (never read by the mathematics; it exists so a consumer can interpret the numbers). BOTH enter parameters_identity and request_identity. ONLY participating fields may enter output_identity and computation_identity. Therefore equal computation_identity with differing request_identity is the SIGNATURE of an annotating field, not a defect -- a cache keyed on computation_identity may reuse the output bytes and must NOT reuse their interpretation. An annotating field is never silently defaulted: absent and present-with-the-conventional-value stay distinguishable. Stated as a general rule in docs/SCL_CONTRACT.md section 6.1 and enforced across the whole operation registry by tests/test_annotating_parameters.py. Measured on dt; units are the next instance."
-  input_identity: H(input_payload)
-  inputs_are_not_parameters: observations and other bulk inputs are hashed into input_identity, never into parameters_identity; hashing a measurement stream into parameter identity would mint a new operation identity per timestep and make the model useless for recursive workloads
-  operation_identity: H(operation || backend)
-  parameters_identity: H(configuration_bytes)
-  request_identity: H(operation || backend || parameters || input)
-  status: EXISTING and already general -- carried both implemented operations with no per-operation identity mechanism
-recursive_computation_analysis:
-  consequence: "kalman_filter_linear is the only candidate that would convert generation_depth_bounded from vacuous to operative. Neither branch of the prompt's IF-implemented/IF-not conditional applies cleanly: the invariant is declared but vacuous, a third state. Whether supplying it with a semantic domain for the first time constitutes a bend under bend_protocol is a DAQ-side judgement and is deliberately NOT decided here."
-  depth_rule_if_adopted: "depth=0 when initialization_provenance=measured and every input stream is class=measured; depth=prior_depth+1 when initialization_provenance=computed(prior_id); GUARD: if the measurement stream is itself computed, depth inherits from the STREAM rather than the initialization, which closes composition and not merely recursion"
-  generation_depth_bounded_status_in_daq: declared in architecture/invariants.yaml with status vacuously_enforced; zero Python references; its recorded evidence is that no generative path exists to bound
-  scl_has_no_recursive_operation_today: every SCL operation is a pure function of (configuration, input) and carries no state between invocations, so SCL cannot currently exercise the invariant either
-substrate_inventory:
-  complex_arithmetic:
-    classification: EXISTING
-    evidence: std::complex<double> throughout native/src/fourier.cpp and the cuFFT backend; complex wire encoding in python/scl/fourier.py
-  decompositions:
-    classification: MISSING
-    evidence: no QR, Cholesky, LU, SVD or eigendecomposition exists in any traced source file
-  dynamic_programming:
-    classification: MISSING
-    evidence: no recurrence table, no argmax/backtracking structure anywhere in native/ or python/scl/
-  linear_solves:
-    classification: MISSING
-    evidence: no solver of any kind; the only division in native math is scalar
-  matrices:
-    classification: MISSING
-    evidence: no matrix type, no 2-D indexing convention, no row/column-major decision recorded anywhere
-  matrix_multiplication:
-    classification: MISSING
-    evidence: grep for matmul/gemm/transpose across native/src, native/include and python/scl returns nothing
-  numerical_differentiation:
-    classification: OUT OF SCOPE
-    evidence: a finite-difference check exists only inside tests as a validation device (native/tests/test_lj_pairwise.cpp); it is not a substrate capability and is not callable as an operation
-  numerical_integration:
-    classification: MISSING
-    evidence: no quadrature or accumulation-over-time primitive exists
-  optimization:
-    classification: MISSING
-    evidence: no objective/step/convergence machinery; scl_cli performs one deterministic evaluation per invocation
-  reductions:
-    classification: EXISTING
-    evidence: "summation reductions in both operations: pairwise energy accumulation and the DFT inner sum"
-  scalar_arithmetic:
-    classification: EXISTING
-    evidence: IEEE-754 float64 throughout; -fno-fast-math pinned in native/CMakeLists.txt so reductions are not reassociated
-  state_transitions:
-    classification: MISSING
-    evidence: every operation is a pure function of (configuration, input); no operation carries state across invocations and no recursive/streaming execution model exists
-  tensors:
-    classification: OUT OF SCOPE
-    evidence: no rank-N structure; deliberately not built -- the prompt forbids a universal tensor abstraction without a consuming workload
-  transforms:
-    classification: EXISTING
-    evidence: fourier_transform_1d, forward and inverse, three normalizations, validated against impulse/DC/pure-tone/Parseval/reconstruction
-  transpose:
-    classification: MISSING
-    evidence: no matrix type exists to transpose
-  vectors:
-    classification: REUSABLE
-    evidence: contiguous float64 sequences are the established wire form (N*24-byte particles, N*16-byte complex samples) with encode/decode helpers, but there is no general vector type with arithmetic
-unresolved_edges:
-  comparability_is_weaker_than_identity:
-    edge: The annotating-parameter rule makes equal computation_identity compatible with different interpretations. Two Fourier results over the same samples with different dt are comparable as BIN-INDEXED VECTORS and are NOT comparable as SPECTRA, because bin k denotes a different physical frequency in each.
-    generalizes: Any consumer that treats identity collision as request equivalence is wrong at exactly this point, for any annotating field -- units included.
-    measured_basis: "Directly measured: the two results are byte-identical and share a computation_identity, while their frequency axes differ by the ratio of their sample spacings."
-    rule_needed_when_a_comparison_layer_exists: results are spectrally comparable only when their ANNOTATING fields agree, not merely when their computation_identity agree
-    status: RECORDED_UNRESOLVED
-    why_it_is_not_solved_here: SCL does not own a comparison layer and there is no comparison layer yet in which to place the check. Solving it inside SCL would mean inventing a second identity notion for comparability, which is precisely the parallel-architecture failure the design forbids.
-  physical_actuation_boundary:
-    edge: pid_controller is recorded as PURE COMPUTATION ONLY. Connecting a controller output to equipment is physical intervention on the system under study, and no actuation-authority boundary exists anywhere in this architecture.
-    status: RECORDED_UNRESOLVED
-    why_it_is_not_solved_here: An actuation boundary is a safety and authority question, not a numerical one, and neither repository currently has a place to state it.
-validation_requirements:
-  cross_backend: tolerance-based only, never bitwise, and only after real GPU execution; different summation order legitimately changes the last bits
-  determinism: same binary, same machine, same backend is bitwise reproducible and is asserted for both implemented operations
-  principle: independent mathematical properties are preferred over an independently coded replica; a reference written by the same author from the same reading of a spec reproduces the misreading and then agrees with itself
-  worked_example_fourier: impulse -> flat spectrum; DC -> single bin; pure tone -> predicted bin; real cosine -> conjugate pair; Parseval; unitary normalization; inverse reconstruction
-  worked_example_kalman: innovation mean, covariance and whiteness with sample count and tolerance STATED BEFORE running, plus analytic scalar cases with known steady-state gain; comparing an estimate to simulated ground truth conflates filter, model and simulation correctness
-  worked_example_least_squares: known beta from constructed y=X*beta; residual orthogonality X^T r ~ 0; rank-deficient cases; deliberately ill-conditioned systems such as a Hilbert matrix
-workloads:
-  convolution_1d:
-    blocking_requirements: []
-    computational_parameters:
-      - mode_full_same_valid
-      - boundary_handling
-      - precision
-    condition_requirements: none_required
-    minimum_observation_fields:
-      - ordered_values
-    modality: ordered_1d_sequence
-    model_parameters:
-      - kernel, when the kernel is a modelling choice rather than a second observation
-    notes: Shares the ordered-1d modality with fourier_transform_1d, so its DAQ requirement is already satisfied wherever Fourier's is. Direct and FFT-based algorithms could share one mathematical operation identity.
-    observation_requirements:
-      - an ordered sequence of scalar values
-      - a kernel/second sequence, which may be asserted rather than observed
-    ordering_requirements: required_and_significant
-    primitives_missing:
-      - sliding_window
-    primitives_required:
-      - reductions
-      - sliding_window
-    required_metadata:
-      - units_of_sampled_quantity
-    status_in_scl: NOT_IMPLEMENTED
-    structured_data_requirements: none
-    uncertainty_requirements: none
-  fourier_transform_1d:
-    blocking_requirements:
-      - consequence_if_unmet: not applicable -- satisfied
-        measured_basis: Built and validated against independent mathematics; the operation runs today over exactly this shape.
-        owner: daq
-        requirement: ordered_scalar_sequence
-        statement: An ordered sequence of scalar values in which sample ORDER is significant and recoverable. This is the whole DAQ-side requirement of the transform family.
-        status: SATISFIED
-      - consequence_if_unmet: A supplied-but-wrong or silently-defaulted spacing would place every frequency on a wrong axis while the numbers themselves stayed correct -- an error that is invisible in the output bytes.
-        generalizes_to: "This is the ANNOTATING PARAMETER shape, stated as a general identity rule in docs/SCL_CONTRACT.md section 6.1 rather than as a Fourier detail: a field that annotates a result without participating in it enters parameters_identity and request_identity but must never enter output_identity or computation_identity, and must never be silently defaulted. UNITS are the next instance and a sharper one, because a missing axis is visibly absent whereas a wrongly-assumed unit is invisibly present."
-        measured_basis: "Measured property of the built operation: two requests differing only in dt produce byte-identical output, so they share a computation_identity while differing in request_identity. Absence is carried by an explicit has_sample_spacing flag, not by a sentinel value."
-        owner: daq
-        requirement: annotating_sample_spacing
-        statement: "Sample spacing (or timestamps) is OPTIONAL and, when supplied, must be distinguishable from its own absence rather than defaulted. SCL never assumes dt=1: a result computed without a spacing is bin-indexed and says so."
-        status: SATISFIED
-    computational_parameters:
-      - direction
-      - normalization
-      - precision
-      - input_kind
-      - spectrum_convention
-    condition_requirements: none_required_by_the_transform
-    minimum_observation_fields:
-      - ordered_values
-    modality: ordered_1d_sequence
-    model_parameters:
-      - none -- a transform asserts no model of the system
-    notes: Implemented and validated against independent mathematics. input_kind is fixed at complex and spectrum_convention at two_sided by the contract (not backend defaults); making either selectable would require an explicit configuration field participating in parameters_identity.
-    observation_requirements:
-      - an ordered sequence of scalar values; sample order IS the signal
-      - sample_spacing OR timestamps -- OPTIONAL, required only if a physical frequency axis is wanted; absent means bin-index output
-    ordering_requirements: required_and_significant
-    primitives_missing: []
-    primitives_required:
-      - complex_arithmetic
-      - reductions
-      - transforms
-    required_metadata:
-      - units_of_sampled_quantity
-    status_in_scl: IMPLEMENTED
-    structured_data_requirements: none
-    uncertainty_requirements: none
-  kalman_filter_linear:
-    blocking_requirements:
-      - consequence_if_unmet: R would have to be ASSERTED by the modeller rather than measurement-derived, which moves the estimate's confidence from measured to asserted without that being visible in the result.
-        measured_basis: SCL's implemented operations carry no uncertainty channel at all, and the evidence layer's uncertainty vocabulary is scalar-or-absent; neither side currently has a representation for a covariance.
-        owner: daq
-        requirement: structured_measurement_uncertainty
-        statement: DAQ must be able to express a measurement covariance R, not only a scalar uncertainty per observation. A scalar is sufficient ONLY when the measurement is genuinely 1-D and uncorrelated; for a measurement vector it discards the off-diagonal terms that determine how the filter weights components against each other.
-        status: UNSATISFIED
-      - consequence_if_unmet: "A recursive estimate would carry an unbounded, unrecorded provenance chain: step T's identity depends on step T-1's without any depth being tracked, so nothing would detect a trajectory that had drifted arbitrarily far from measured input."
-        measured_basis: architecture/invariants.yaml declares the invariant; its own recorded evidence is that no generative path exists to bound. Every SCL operation today is a pure function of (configuration, input) with no state carried between invocations, so SCL cannot exercise it either.
-        owner: daq
-        proposed_rule: "depth=0 when initialization_provenance=measured AND every input stream is class=measured; depth=prior_depth+1 when initialization_provenance=computed(prior_id). GUARD: if the measurement stream is ITSELF computed, depth inherits from the STREAM rather than from the initialization -- which closes composition, not merely recursion. Offered as a measured requirement for DAQ to accept, amend or reject; SCL does not own this invariant."
-        requirement: recursive_generation_depth
-        statement: generation_depth_bounded must acquire an operative semantic domain before a recursive operation can be admitted. It is currently declared with status vacuously_enforced and zero references; a Kalman trajectory is the first thing that would make it bite, so the rule must exist BEFORE the first recursive result, not be retrofitted around one.
-        status: UNSATISFIED
-    computational_parameters:
-      - precision
-      - gain_solve_method_cholesky_or_ldlt
-      - covariance_update_form_standard_or_joseph
-    condition_requirements: conditions affecting measurement noise must be recoverable if R varies with them
-    minimum_observation_fields:
-      - ordered_measurement_vectors
-      - timestamps_or_uniform_interval
-    modality: ordered_multivariate_time_series
-    model_parameters:
-      - Q -- process noise. ASSERTED BY THE MODELLER, NEVER SUPPLIED BY DAQ AND NEVER INFERRED FROM MEASUREMENTS. Q silently determines how much the filter trusts its own model versus the data, so deriving it from the data would make the estimate's confidence self-justifying.
-      - F -- state transition, asserted
-      - H -- observation model, asserted
-      - x0 -- initial state, asserted
-      - P0 -- initial covariance, asserted
-    notes: "The only candidate that is RECURSIVE, and therefore the only one that would make generation_depth_bounded operative rather than vacuous. Its two blocking_requirements are independent: structured R is a DATA-SHAPE gap and recursive depth is an INVARIANT gap, and satisfying either leaves the other untouched. See recursive_computation_analysis below."
-    observation_requirements:
-      - an ordered stream of measurement vectors y_1..y_T
-      - timestamps or a stated uniform interval; the transition depends on elapsed time
-      - measurement uncertainty sufficient to construct or interpret R, IF R is to be measurement-derived rather than asserted
-      - stream identity, so a recursive trajectory can name the stream it consumed
-    ordering_requirements: required_and_significant
-    primitives_missing:
-      - matrices
-      - matrix_multiplication
-      - transpose
-      - linear_solves
-      - covariance_propagation
-      - psd_handling
-    primitives_required:
-      - matrices
-      - matrix_multiplication
-      - transpose
-      - linear_solves
-      - covariance_propagation
-      - psd_handling
-    required_metadata:
-      - units_per_measurement_component
-    status_in_scl: NOT_IMPLEMENTED
-    structured_data_requirements: covariance matrices; a scalar uncertainty per observation is INSUFFICIENT unless the measurement is genuinely 1-D and uncorrelated
-    uncertainty_requirements: structured -- a measurement covariance R, not a scalar, whenever R is measurement-derived
-  least_squares:
-    blocking_requirements:
-      - consequence_if_unmet: Silently misaligned columns produce a well-formed fit of the wrong model; nothing in the numbers reveals it.
-        measured_basis: SCL's implemented operations take a flat byte payload with position-implied meaning, which is adequate for an ordered sequence and inadequate for a joinable table. No aligned-table input shape exists on either side.
-        owner: daq
-        requirement: stable_sample_and_variable_identity
-        statement: Each observation must carry a sample identity sufficient to align a response with its predictors, and a variable identity sufficient to know which column is which. Row position is NOT an acceptable identity here, because ordering is explicitly not required by this modality.
-        status: UNSATISFIED
-      - consequence_if_unmet: "Silently dropped rows change the fit and change it invisibly: the residuals of a fit over a quietly smaller sample look entirely healthy."
-        measured_basis: No missing-value representation exists in the SCL input contract; a float payload has no way to say absent, which is the same absence problem the annotating-parameter rule solves one layer up.
-        owner: daq
-        requirement: explicit_missing_value_semantics
-        statement: Missing values must be explicitly represented and their semantics stated, not encoded as a sentinel number or elided by dropping rows.
-        status: UNSATISFIED
-      - consequence_if_unmet: The workload cannot be built at all. This is SCL-owned work, recorded here so DAQ can see which gaps are not theirs to close.
-        measured_basis: substrate_inventory classifies all five as MISSING with traced evidence.
-        owner: scl
-        requirement: linear_algebra_primitive_family
-        statement: Matrices, matrix multiplication, transpose, decompositions and linear solves must exist in SCL. None of them do.
-        status: UNSATISFIED
-    computational_parameters:
-      - solver_qr_cholesky_svd_or_normal_equations
-      - weighting
-      - precision
-    condition_requirements: conditions_that_distinguish_samples_must_be_recoverable_as_predictors_or_strata
-    minimum_observation_fields:
-      - response_values
-      - predictor_values
-      - sample_identity
-      - variable_identity
-    modality: multivariate_observation_table
-    model_parameters:
-      - the choice of design matrix / basis functions is a modelling assertion, not an observation
-    notes: Requires the entire missing linear-algebra family. Ordering is NOT required, which is the sharpest modality contrast with the transform family. Its blocking_requirements split across BOTH repositories, which is why they name an owner.
-    observation_requirements:
-      - a response value per sample
-      - one or more predictor values per sample
-      - sample identity sufficient to align response with predictors
-      - variable identity sufficient to know which column is which
-      - explicit missing-value semantics; silently dropped rows change the fit
-    ordering_requirements: not_required_rows_exchangeable
-    primitives_missing:
-      - matrices
-      - matrix_multiplication
-      - transpose
-      - decompositions
-      - linear_solves
-    primitives_required:
-      - matrices
-      - matrix_multiplication
-      - transpose
-      - decompositions
-      - linear_solves
-    required_metadata:
-      - units_per_variable
-      - missing_value_semantics
-    status_in_scl: NOT_IMPLEMENTED
-    structured_data_requirements: aligned_rows -- response and predictors must be joinable per sample, which requires a stable sample identity
-    uncertainty_requirements: scalar_per_observation_only_if_weighted
-  pca:
-    blocking_requirements:
-      - consequence_if_unmet: Components computed over misaligned columns are well-formed and meaningless.
-        measured_basis: "Same measured gap: no aligned-table input shape exists on either side."
-        owner: daq
-        requirement: stable_sample_and_variable_identity
-        statement: Identical to the least_squares requirement of the same name, and satisfied by the same DAQ-side capability -- both are the multivariate_observation_table modality.
-        status: UNSATISFIED
-      - consequence_if_unmet: The principal components silently reflect the arbitrary choice of measurement units rather than the structure of the data.
-        measured_basis: SCL carries no unit channel at all; a float64 payload is dimensionless as far as the substrate is concerned.
-        owner: daq
-        relates_to: "This is the UNITS instance of the annotating-parameter shape recorded under fourier_transform_1d: a unit annotates a quantity without participating in its arithmetic, and an absent unit must not resolve to an assumed one."
-        requirement: commensurable_units_or_explicit_scaling
-        statement: "Units per variable must be recorded, because PCA over mixed units is scale-dependent: the result changes if a variable is expressed in metres rather than millimetres. Either the units are commensurable or the scaling choice is asserted explicitly as a model parameter."
-        status: UNSATISFIED
-      - consequence_if_unmet: The workload cannot be built at all.
-        measured_basis: substrate_inventory classifies all four as MISSING. This is a strict subset of the least_squares primitive set -- pca requires no linear solve.
-        owner: scl
-        requirement: decomposition_primitive
-        statement: Matrices, matrix multiplication, transpose and decompositions must exist in SCL.
-        status: UNSATISFIED
-    computational_parameters:
-      - n_components
-      - centering
-      - scaling
-      - decomposition_method_svd_or_eigen
-      - precision
-    condition_requirements: none_required
-    minimum_observation_fields:
-      - values_per_variable
-      - sample_identity
-      - variable_identity
-    modality: multivariate_observation_table
-    model_parameters:
-      - centering and scaling choices are modelling assertions
-    notes: "Strictly downstream of the decomposition primitive least_squares would establish. Its DAQ-side requirements are a superset of least_squares': the same table identity, plus a unit requirement least_squares does not have."
-    observation_requirements:
-      - a value per variable per sample
-      - sample and variable identity
-      - commensurable units, or an explicit scaling decision, since PCA on mixed units is scale-dependent
-    ordering_requirements: not_required_rows_exchangeable
-    primitives_missing:
-      - matrices
-      - matrix_multiplication
-      - transpose
-      - decompositions
-    primitives_required:
-      - matrices
-      - matrix_multiplication
-      - transpose
-      - decompositions
-    required_metadata:
-      - units_per_variable
-      - missing_value_semantics
-    status_in_scl: NOT_IMPLEMENTED
-    structured_data_requirements: aligned_rows across variables
-    uncertainty_requirements: none
-  pid_controller:
-    blocking_requirements: []
-    computational_parameters:
-      - anti_windup_strategy
-      - derivative_filtering
-      - precision
-    condition_requirements: none_required_for_the_computation
-    minimum_observation_fields:
-      - ordered_measured_values
-      - timestamps_or_uniform_interval
-    modality: ordered_1d_sequence_with_setpoint
-    model_parameters:
-      - Kp, Ki, Kd and the setpoint are asserted control choices, never observations
-    notes: "PURE COMPUTATION ONLY. Physical actuation is explicitly out of scope: connecting a controller output to equipment is physical intervention on the system under study, and no actuation-authority boundary exists in this architecture. Carried forward as unresolved."
-    observation_requirements:
-      - an ordered stream of measured process values
+"artifact": "scl_requirements"
+"canonicalization":
+  "anchors_aliases": "forbidden"
+  "encoding": "UTF-8, LF line endings, single trailing newline"
+  "floats": "shortest round-trip repr; exponent form only when |x| < 1e-4 or |x| >= 1e16, and then always with a decimal point in the mantissa and an explicit exponent sign so the value round-trips as a float under YAML 1.1 as well as 1.2"
+  "hash": "sha256 over the serialized bytes"
+  "implementation": "architecture/exchange/canonical_yaml.py"
+  "keys": "sorted lexicographically at every level"
+  "reference_format": "sha256:<hex>"
+  "serialization": "YAML 1.2, block style only; {} and [] are the one documented exception, since empty collections have no block form"
+  "shared_fixture": "architecture/exchange/canonicalization_fixture.yaml"
+  "strings": "double-quoted only where plain style would be unsafe or ambiguous"
+"contains_workload_selection": false
+"core_vocabulary_candidates":
+  "absent_is_not_zero":
+    "counter_consideration": "Three instances is not many, and each layer's absence means something slightly different (unmeasured, not-applicable, not-supplied). A premature unification could collapse distinctions that are worth keeping apart."
+    "observation": "The same distinction has now been drawn independently at three layers: uncertainty_kind=absent in the evidence vocabulary; an operation that emits no n_particles metric rather than n_particles=0 (operation contract clause 7); and an absent sample spacing that is not dt=1 (identity contract section 6.1 clause 4). None of the three was derived from the others."
+    "reading": "Three independent arrivals at one distinction is mild evidence that ABSENT belongs in the shared core vocabulary as a first-class value rather than being re-specified per layer. Recorded as an observation for the joint decision to weigh; SCL does not own the core vocabulary and is not asserting the change."
+    "status": "CANDIDATE_ONLY_NOT_PROPOSED"
+"cuda_libraries_present":
+  "cublas": "present -- /usr/lib/x86_64-linux-gnu/libcublas.so"
+  "cufft": "present and already linked by the fourier_transform_1d CUDA backend"
+  "cusolver": "present -- /usr/lib/x86_64-linux-gnu/libcusolver.so"
+  "note": "presence is a BUILD fact only. No CUDA device is visible in this environment (cudaGetDeviceCount()==0, nvmlInit_v2()==NVML_ERROR_DRIVER_NOT_LOADED), so no GPU numerical, determinism, performance or crossover claim is made for any backend."
+"cuda_state":
+  "compiled": true
+  "gpu_executed": false
+  "linked": true
+  "runtime_loaded": true
+"daq_execution_record_finding":
+  "consequence": "Section 16 as written would place a second ExecutionRecord BESIDE the existing one, which is the arrangement DAQ's own file rules out. Absorption and coexistence are different designs and the choice between them belongs to the joint decision, not to either repository alone."
+  "daq_s_own_stated_position": "DAQ's file states its integration_dependency as: canonical for DAF acquisition only; a broader unified substrate that later grows its own execution-record contract should absorb this one, not sit beside it."
+  "finding": "The joint prompt's section 16 specifies an ExecutionRecord carrying computation-shaped fields (backend, backend_version, hardware, seed, verification_status, computation_identity). DAQ's architecture/execution_record.yaml already defines a record of the same name with scope=daf_acquisition_only and owner=daf, keyed on operation_id=H(plan_id, source_id, parameters, mode), whose fields are acquisition-shaped (adapter_id, adapter_version, artifact_ids, version_ids, admission_failure_count, outcome, input/output_fingerprint, parent_execution_id)."
+  "measured_basis": "Read directly from DAQ's committed architecture/execution_record.yaml. None of section 16's computation fields appear in it; the two field sets are disjoint apart from the record's name."
+  "scl_position": "SCL raises this and does not resolve it. SCL has no ExecutionRecord of its own and is not proposing one; adding a second identity or record system is exactly what the architecture forbids."
+  "status": "RAISED_UNRESOLVED"
+  "why_it_matters": "The joint decision record is bound to these artifacts by hash. If the two repositories write it against two different contracts that share a name, the divergence is invisible in the hashes and surfaces at wiring time instead."
+"extends": "core@1.0.0"
+"generated_by": "architecture/exchange/build_scl_requirements.py"
+"identity_model":
+  "annotating_vs_participating_parameters": "Every configuration field is either PARTICIPATING (its value is read by the mathematics, so changing it changes the output bytes) or ANNOTATING (never read by the mathematics; it exists so a consumer can interpret the numbers). BOTH enter parameters_identity and request_identity. ONLY participating fields may enter output_identity and computation_identity. Therefore equal computation_identity with differing request_identity is the SIGNATURE of an annotating field, not a defect -- a cache keyed on computation_identity may reuse the output bytes and must NOT reuse their interpretation. An annotating field is never silently defaulted: absent and present-with-the-conventional-value stay distinguishable. Stated as a general rule in docs/SCL_CONTRACT.md section 6.1 and enforced across the whole operation registry by tests/test_annotating_parameters.py. Measured on dt; units are the next instance."
+  "input_identity": "H(input_payload)"
+  "inputs_are_not_parameters": "observations and other bulk inputs are hashed into input_identity, never into parameters_identity; hashing a measurement stream into parameter identity would mint a new operation identity per timestep and make the model useless for recursive workloads"
+  "operation_identity": "H(operation || backend)"
+  "parameters_identity": "H(configuration_bytes)"
+  "request_identity": "H(operation || backend || parameters || input)"
+  "status": "EXISTING and already general -- carried both implemented operations with no per-operation identity mechanism"
+"recursive_computation_analysis":
+  "consequence": "kalman_filter_linear is the only candidate that would convert generation_depth_bounded from vacuous to operative. Neither branch of the prompt's IF-implemented/IF-not conditional applies cleanly: the invariant is declared but vacuous, a third state. Whether supplying it with a semantic domain for the first time constitutes a bend under bend_protocol is a DAQ-side judgement and is deliberately NOT decided here."
+  "depth_rule_if_adopted": "depth=0 when initialization_provenance=measured and every input stream is class=measured; depth=prior_depth+1 when initialization_provenance=computed(prior_id); GUARD: if the measurement stream is itself computed, depth inherits from the STREAM rather than the initialization, which closes composition and not merely recursion"
+  "generation_depth_bounded_status_in_daq": "declared in architecture/invariants.yaml with status vacuously_enforced; zero Python references; its recorded evidence is that no generative path exists to bound"
+  "scl_has_no_recursive_operation_today": "every SCL operation is a pure function of (configuration, input) and carries no state between invocations, so SCL cannot currently exercise the invariant either"
+"substrate_inventory":
+  "complex_arithmetic":
+    "classification": "EXISTING"
+    "evidence": "std::complex<double> throughout native/src/fourier.cpp and the cuFFT backend; complex wire encoding in python/scl/fourier.py"
+  "decompositions":
+    "classification": "MISSING"
+    "evidence": "no QR, Cholesky, LU, SVD or eigendecomposition exists in any traced source file"
+  "dynamic_programming":
+    "classification": "MISSING"
+    "evidence": "no recurrence table, no argmax/backtracking structure anywhere in native/ or python/scl/"
+  "linear_solves":
+    "classification": "MISSING"
+    "evidence": "no solver of any kind; the only division in native math is scalar"
+  "matrices":
+    "classification": "MISSING"
+    "evidence": "no matrix type, no 2-D indexing convention, no row/column-major decision recorded anywhere"
+  "matrix_multiplication":
+    "classification": "MISSING"
+    "evidence": "grep for matmul/gemm/transpose across native/src, native/include and python/scl returns nothing"
+  "numerical_differentiation":
+    "classification": "OUT OF SCOPE"
+    "evidence": "a finite-difference check exists only inside tests as a validation device (native/tests/test_lj_pairwise.cpp); it is not a substrate capability and is not callable as an operation"
+  "numerical_integration":
+    "classification": "MISSING"
+    "evidence": "no quadrature or accumulation-over-time primitive exists"
+  "optimization":
+    "classification": "MISSING"
+    "evidence": "no objective/step/convergence machinery; scl_cli performs one deterministic evaluation per invocation"
+  "reductions":
+    "classification": "EXISTING"
+    "evidence": "summation reductions in both operations: pairwise energy accumulation and the DFT inner sum"
+  "scalar_arithmetic":
+    "classification": "EXISTING"
+    "evidence": "IEEE-754 float64 throughout; -fno-fast-math pinned in native/CMakeLists.txt so reductions are not reassociated"
+  "state_transitions":
+    "classification": "MISSING"
+    "evidence": "every operation is a pure function of (configuration, input); no operation carries state across invocations and no recursive/streaming execution model exists"
+  "tensors":
+    "classification": "OUT OF SCOPE"
+    "evidence": "no rank-N structure; deliberately not built -- the prompt forbids a universal tensor abstraction without a consuming workload"
+  "transforms":
+    "classification": "EXISTING"
+    "evidence": "fourier_transform_1d, forward and inverse, three normalizations, validated against impulse/DC/pure-tone/Parseval/reconstruction"
+  "transpose":
+    "classification": "MISSING"
+    "evidence": "no matrix type exists to transpose"
+  "vectors":
+    "classification": "REUSABLE"
+    "evidence": "contiguous float64 sequences are the established wire form (N*24-byte particles, N*16-byte complex samples) with encode/decode helpers, but there is no general vector type with arithmetic"
+"unresolved_edges":
+  "comparability_is_weaker_than_identity":
+    "edge": "The annotating-parameter rule makes equal computation_identity compatible with different interpretations. Two Fourier results over the same samples with different dt are comparable as BIN-INDEXED VECTORS and are NOT comparable as SPECTRA, because bin k denotes a different physical frequency in each."
+    "generalizes": "Any consumer that treats identity collision as request equivalence is wrong at exactly this point, for any annotating field -- units included."
+    "measured_basis": "Directly measured: the two results are byte-identical and share a computation_identity, while their frequency axes differ by the ratio of their sample spacings."
+    "rule_needed_when_a_comparison_layer_exists": "results are spectrally comparable only when their ANNOTATING fields agree, not merely when their computation_identity agree"
+    "status": "RECORDED_UNRESOLVED"
+    "why_it_is_not_solved_here": "SCL does not own a comparison layer and there is no comparison layer yet in which to place the check. Solving it inside SCL would mean inventing a second identity notion for comparability, which is precisely the parallel-architecture failure the design forbids."
+  "physical_actuation_boundary":
+    "edge": "pid_controller is recorded as PURE COMPUTATION ONLY. Connecting a controller output to equipment is physical intervention on the system under study, and no actuation-authority boundary exists anywhere in this architecture."
+    "status": "RECORDED_UNRESOLVED"
+    "why_it_is_not_solved_here": "An actuation boundary is a safety and authority question, not a numerical one, and neither repository currently has a place to state it."
+"validation_requirements":
+  "cross_backend": "tolerance-based only, never bitwise, and only after real GPU execution; different summation order legitimately changes the last bits"
+  "determinism": "same binary, same machine, same backend is bitwise reproducible and is asserted for both implemented operations"
+  "principle": "independent mathematical properties are preferred over an independently coded replica; a reference written by the same author from the same reading of a spec reproduces the misreading and then agrees with itself"
+  "worked_example_fourier": "impulse -> flat spectrum; DC -> single bin; pure tone -> predicted bin; real cosine -> conjugate pair; Parseval; unitary normalization; inverse reconstruction"
+  "worked_example_kalman": "innovation mean, covariance and whiteness with sample count and tolerance STATED BEFORE running, plus analytic scalar cases with known steady-state gain; comparing an estimate to simulated ground truth conflates filter, model and simulation correctness"
+  "worked_example_least_squares": "known beta from constructed y=X*beta; residual orthogonality X^T r ~ 0; rank-deficient cases; deliberately ill-conditioned systems such as a Hilbert matrix"
+"workloads":
+  "convolution_1d":
+    "blocking_requirements": []
+    "computational_parameters":
+      - "mode_full_same_valid"
+      - "boundary_handling"
+      - "precision"
+    "condition_requirements": "none_required"
+    "minimum_observation_fields":
+      - "ordered_values"
+    "modality": "ordered_1d_sequence"
+    "model_parameters":
+      - "kernel, when the kernel is a modelling choice rather than a second observation"
+    "notes": "Shares the ordered-1d modality with fourier_transform_1d, so its DAQ requirement is already satisfied wherever Fourier's is. Direct and FFT-based algorithms could share one mathematical operation identity."
+    "observation_requirements":
+      - "an ordered sequence of scalar values"
+      - "a kernel/second sequence, which may be asserted rather than observed"
+    "ordering_requirements": "required_and_significant"
+    "primitives_missing":
+      - "sliding_window"
+    "primitives_required":
+      - "reductions"
+      - "sliding_window"
+    "required_metadata":
+      - "units_of_sampled_quantity"
+    "status_in_scl": "NOT_IMPLEMENTED"
+    "structured_data_requirements": "none"
+    "uncertainty_requirements": "none"
+  "fourier_transform_1d":
+    "blocking_requirements":
+      - "consequence_if_unmet": "not applicable -- satisfied"
+        "measured_basis": "Built and validated against independent mathematics; the operation runs today over exactly this shape."
+        "owner": "daq"
+        "requirement": "ordered_scalar_sequence"
+        "statement": "An ordered sequence of scalar values in which sample ORDER is significant and recoverable. This is the whole DAQ-side requirement of the transform family."
+        "status": "SATISFIED"
+      - "consequence_if_unmet": "A supplied-but-wrong or silently-defaulted spacing would place every frequency on a wrong axis while the numbers themselves stayed correct -- an error that is invisible in the output bytes."
+        "generalizes_to": "This is the ANNOTATING PARAMETER shape, stated as a general identity rule in docs/SCL_CONTRACT.md section 6.1 rather than as a Fourier detail: a field that annotates a result without participating in it enters parameters_identity and request_identity but must never enter output_identity or computation_identity, and must never be silently defaulted. UNITS are the next instance and a sharper one, because a missing axis is visibly absent whereas a wrongly-assumed unit is invisibly present."
+        "measured_basis": "Measured property of the built operation: two requests differing only in dt produce byte-identical output, so they share a computation_identity while differing in request_identity. Absence is carried by an explicit has_sample_spacing flag, not by a sentinel value."
+        "owner": "daq"
+        "requirement": "annotating_sample_spacing"
+        "statement": "Sample spacing (or timestamps) is OPTIONAL and, when supplied, must be distinguishable from its own absence rather than defaulted. SCL never assumes dt=1: a result computed without a spacing is bin-indexed and says so."
+        "status": "SATISFIED"
+    "computational_parameters":
+      - "direction"
+      - "normalization"
+      - "precision"
+      - "input_kind"
+      - "spectrum_convention"
+    "condition_requirements": "none_required_by_the_transform"
+    "minimum_observation_fields":
+      - "ordered_values"
+    "modality": "ordered_1d_sequence"
+    "model_parameters":
+      - "none -- a transform asserts no model of the system"
+    "notes": "Implemented and validated against independent mathematics. input_kind is fixed at complex and spectrum_convention at two_sided by the contract (not backend defaults); making either selectable would require an explicit configuration field participating in parameters_identity."
+    "observation_requirements":
+      - "an ordered sequence of scalar values; sample order IS the signal"
+      - "sample_spacing OR timestamps -- OPTIONAL, required only if a physical frequency axis is wanted; absent means bin-index output"
+    "ordering_requirements": "required_and_significant"
+    "primitives_missing": []
+    "primitives_required":
+      - "complex_arithmetic"
+      - "reductions"
+      - "transforms"
+    "required_metadata":
+      - "units_of_sampled_quantity"
+    "status_in_scl": "IMPLEMENTED"
+    "structured_data_requirements": "none"
+    "uncertainty_requirements": "none"
+  "kalman_filter_linear":
+    "blocking_requirements":
+      - "consequence_if_unmet": "R would have to be ASSERTED by the modeller rather than measurement-derived, which moves the estimate's confidence from measured to asserted without that being visible in the result."
+        "measured_basis": "SCL's implemented operations carry no uncertainty channel at all, and the evidence layer's uncertainty vocabulary is scalar-or-absent; neither side currently has a representation for a covariance."
+        "owner": "daq"
+        "requirement": "structured_measurement_uncertainty"
+        "statement": "DAQ must be able to express a measurement covariance R, not only a scalar uncertainty per observation. A scalar is sufficient ONLY when the measurement is genuinely 1-D and uncorrelated; for a measurement vector it discards the off-diagonal terms that determine how the filter weights components against each other."
+        "status": "UNSATISFIED"
+      - "consequence_if_unmet": "A recursive estimate would carry an unbounded, unrecorded provenance chain: step T's identity depends on step T-1's without any depth being tracked, so nothing would detect a trajectory that had drifted arbitrarily far from measured input."
+        "measured_basis": "architecture/invariants.yaml declares the invariant; its own recorded evidence is that no generative path exists to bound. Every SCL operation today is a pure function of (configuration, input) with no state carried between invocations, so SCL cannot exercise it either."
+        "owner": "daq"
+        "proposed_rule": "depth=0 when initialization_provenance=measured AND every input stream is class=measured; depth=prior_depth+1 when initialization_provenance=computed(prior_id). GUARD: if the measurement stream is ITSELF computed, depth inherits from the STREAM rather than from the initialization -- which closes composition, not merely recursion. Offered as a measured requirement for DAQ to accept, amend or reject; SCL does not own this invariant."
+        "requirement": "recursive_generation_depth"
+        "statement": "generation_depth_bounded must acquire an operative semantic domain before a recursive operation can be admitted. It is currently declared with status vacuously_enforced and zero references; a Kalman trajectory is the first thing that would make it bite, so the rule must exist BEFORE the first recursive result, not be retrofitted around one."
+        "status": "UNSATISFIED"
+    "computational_parameters":
+      - "precision"
+      - "gain_solve_method_cholesky_or_ldlt"
+      - "covariance_update_form_standard_or_joseph"
+    "condition_requirements": "conditions affecting measurement noise must be recoverable if R varies with them"
+    "minimum_observation_fields":
+      - "ordered_measurement_vectors"
+      - "timestamps_or_uniform_interval"
+    "modality": "ordered_multivariate_time_series"
+    "model_parameters":
+      - "Q -- process noise. ASSERTED BY THE MODELLER, NEVER SUPPLIED BY DAQ AND NEVER INFERRED FROM MEASUREMENTS. Q silently determines how much the filter trusts its own model versus the data, so deriving it from the data would make the estimate's confidence self-justifying."
+      - "F -- state transition, asserted"
+      - "H -- observation model, asserted"
+      - "x0 -- initial state, asserted"
+      - "P0 -- initial covariance, asserted"
+    "notes": "The only candidate that is RECURSIVE, and therefore the only one that would make generation_depth_bounded operative rather than vacuous. Its two blocking_requirements are independent: structured R is a DATA-SHAPE gap and recursive depth is an INVARIANT gap, and satisfying either leaves the other untouched. See recursive_computation_analysis below."
+    "observation_requirements":
+      - "an ordered stream of measurement vectors y_1..y_T"
+      - "timestamps or a stated uniform interval; the transition depends on elapsed time"
+      - "measurement uncertainty sufficient to construct or interpret R, IF R is to be measurement-derived rather than asserted"
+      - "stream identity, so a recursive trajectory can name the stream it consumed"
+    "ordering_requirements": "required_and_significant"
+    "primitives_missing":
+      - "matrices"
+      - "matrix_multiplication"
+      - "transpose"
+      - "linear_solves"
+      - "covariance_propagation"
+      - "psd_handling"
+    "primitives_required":
+      - "matrices"
+      - "matrix_multiplication"
+      - "transpose"
+      - "linear_solves"
+      - "covariance_propagation"
+      - "psd_handling"
+    "required_metadata":
+      - "units_per_measurement_component"
+    "status_in_scl": "NOT_IMPLEMENTED"
+    "structured_data_requirements": "covariance matrices; a scalar uncertainty per observation is INSUFFICIENT unless the measurement is genuinely 1-D and uncorrelated"
+    "uncertainty_requirements": "structured -- a measurement covariance R, not a scalar, whenever R is measurement-derived"
+  "least_squares":
+    "blocking_requirements":
+      - "consequence_if_unmet": "Silently misaligned columns produce a well-formed fit of the wrong model; nothing in the numbers reveals it."
+        "measured_basis": "SCL's implemented operations take a flat byte payload with position-implied meaning, which is adequate for an ordered sequence and inadequate for a joinable table. No aligned-table input shape exists on either side."
+        "owner": "daq"
+        "requirement": "stable_sample_and_variable_identity"
+        "statement": "Each observation must carry a sample identity sufficient to align a response with its predictors, and a variable identity sufficient to know which column is which. Row position is NOT an acceptable identity here, because ordering is explicitly not required by this modality."
+        "status": "UNSATISFIED"
+      - "consequence_if_unmet": "Silently dropped rows change the fit and change it invisibly: the residuals of a fit over a quietly smaller sample look entirely healthy."
+        "measured_basis": "No missing-value representation exists in the SCL input contract; a float payload has no way to say absent, which is the same absence problem the annotating-parameter rule solves one layer up."
+        "owner": "daq"
+        "requirement": "explicit_missing_value_semantics"
+        "statement": "Missing values must be explicitly represented and their semantics stated, not encoded as a sentinel number or elided by dropping rows."
+        "status": "UNSATISFIED"
+      - "consequence_if_unmet": "The workload cannot be built at all. This is SCL-owned work, recorded here so DAQ can see which gaps are not theirs to close."
+        "measured_basis": "substrate_inventory classifies all five as MISSING with traced evidence."
+        "owner": "scl"
+        "requirement": "linear_algebra_primitive_family"
+        "statement": "Matrices, matrix multiplication, transpose, decompositions and linear solves must exist in SCL. None of them do."
+        "status": "UNSATISFIED"
+    "computational_parameters":
+      - "solver_qr_cholesky_svd_or_normal_equations"
+      - "weighting"
+      - "precision"
+    "condition_requirements": "conditions_that_distinguish_samples_must_be_recoverable_as_predictors_or_strata"
+    "minimum_observation_fields":
+      - "response_values"
+      - "predictor_values"
+      - "sample_identity"
+      - "variable_identity"
+    "modality": "multivariate_observation_table"
+    "model_parameters":
+      - "the choice of design matrix / basis functions is a modelling assertion, not an observation"
+    "notes": "Requires the entire missing linear-algebra family. Ordering is NOT required, which is the sharpest modality contrast with the transform family. Its blocking_requirements split across BOTH repositories, which is why they name an owner."
+    "observation_requirements":
+      - "a response value per sample"
+      - "one or more predictor values per sample"
+      - "sample identity sufficient to align response with predictors"
+      - "variable identity sufficient to know which column is which"
+      - "explicit missing-value semantics; silently dropped rows change the fit"
+    "ordering_requirements": "not_required_rows_exchangeable"
+    "primitives_missing":
+      - "matrices"
+      - "matrix_multiplication"
+      - "transpose"
+      - "decompositions"
+      - "linear_solves"
+    "primitives_required":
+      - "matrices"
+      - "matrix_multiplication"
+      - "transpose"
+      - "decompositions"
+      - "linear_solves"
+    "required_metadata":
+      - "units_per_variable"
+      - "missing_value_semantics"
+    "status_in_scl": "NOT_IMPLEMENTED"
+    "structured_data_requirements": "aligned_rows -- response and predictors must be joinable per sample, which requires a stable sample identity"
+    "uncertainty_requirements": "scalar_per_observation_only_if_weighted"
+  "pca":
+    "blocking_requirements":
+      - "consequence_if_unmet": "Components computed over misaligned columns are well-formed and meaningless."
+        "measured_basis": "Same measured gap: no aligned-table input shape exists on either side."
+        "owner": "daq"
+        "requirement": "stable_sample_and_variable_identity"
+        "statement": "Identical to the least_squares requirement of the same name, and satisfied by the same DAQ-side capability -- both are the multivariate_observation_table modality."
+        "status": "UNSATISFIED"
+      - "consequence_if_unmet": "The principal components silently reflect the arbitrary choice of measurement units rather than the structure of the data."
+        "measured_basis": "SCL carries no unit channel at all; a float64 payload is dimensionless as far as the substrate is concerned."
+        "owner": "daq"
+        "relates_to": "This is the UNITS instance of the annotating-parameter shape recorded under fourier_transform_1d: a unit annotates a quantity without participating in its arithmetic, and an absent unit must not resolve to an assumed one."
+        "requirement": "commensurable_units_or_explicit_scaling"
+        "statement": "Units per variable must be recorded, because PCA over mixed units is scale-dependent: the result changes if a variable is expressed in metres rather than millimetres. Either the units are commensurable or the scaling choice is asserted explicitly as a model parameter."
+        "status": "UNSATISFIED"
+      - "consequence_if_unmet": "The workload cannot be built at all."
+        "measured_basis": "substrate_inventory classifies all four as MISSING. This is a strict subset of the least_squares primitive set -- pca requires no linear solve."
+        "owner": "scl"
+        "requirement": "decomposition_primitive"
+        "statement": "Matrices, matrix multiplication, transpose and decompositions must exist in SCL."
+        "status": "UNSATISFIED"
+    "computational_parameters":
+      - "n_components"
+      - "centering"
+      - "scaling"
+      - "decomposition_method_svd_or_eigen"
+      - "precision"
+    "condition_requirements": "none_required"
+    "minimum_observation_fields":
+      - "values_per_variable"
+      - "sample_identity"
+      - "variable_identity"
+    "modality": "multivariate_observation_table"
+    "model_parameters":
+      - "centering and scaling choices are modelling assertions"
+    "notes": "Strictly downstream of the decomposition primitive least_squares would establish. Its DAQ-side requirements are a superset of least_squares': the same table identity, plus a unit requirement least_squares does not have."
+    "observation_requirements":
+      - "a value per variable per sample"
+      - "sample and variable identity"
+      - "commensurable units, or an explicit scaling decision, since PCA on mixed units is scale-dependent"
+    "ordering_requirements": "not_required_rows_exchangeable"
+    "primitives_missing":
+      - "matrices"
+      - "matrix_multiplication"
+      - "transpose"
+      - "decompositions"
+    "primitives_required":
+      - "matrices"
+      - "matrix_multiplication"
+      - "transpose"
+      - "decompositions"
+    "required_metadata":
+      - "units_per_variable"
+      - "missing_value_semantics"
+    "status_in_scl": "NOT_IMPLEMENTED"
+    "structured_data_requirements": "aligned_rows across variables"
+    "uncertainty_requirements": "none"
+  "pid_controller":
+    "blocking_requirements": []
+    "computational_parameters":
+      - "anti_windup_strategy"
+      - "derivative_filtering"
+      - "precision"
+    "condition_requirements": "none_required_for_the_computation"
+    "minimum_observation_fields":
+      - "ordered_measured_values"
+      - "timestamps_or_uniform_interval"
+    "modality": "ordered_1d_sequence_with_setpoint"
+    "model_parameters":
+      - "Kp, Ki, Kd and the setpoint are asserted control choices, never observations"
+    "notes": "PURE COMPUTATION ONLY. Physical actuation is explicitly out of scope: connecting a controller output to equipment is physical intervention on the system under study, and no actuation-authority boundary exists in this architecture. Carried forward as unresolved."
+    "observation_requirements":
+      - "an ordered stream of measured process values"
       - "timestamps or a stated interval -- MANDATORY, not optional: the integral and derivative terms are both defined in terms of dt, so an absent or wrong dt silently rescales two of the three gains"
-    ordering_requirements: required_and_significant
-    primitives_missing:
-      - numerical_integration
-      - numerical_differentiation
-      - state_transitions
-    primitives_required:
-      - reductions
-      - numerical_integration
-      - numerical_differentiation
-      - state_transitions
-    required_metadata:
-      - units_of_measured_variable
-    status_in_scl: NOT_IMPLEMENTED
-    structured_data_requirements: none
-    uncertainty_requirements: none
-  viterbi:
-    blocking_requirements: []
-    computational_parameters:
-      - log_space_or_linear
-      - tie_breaking_rule
-      - precision
-    condition_requirements: none_required
-    minimum_observation_fields:
-      - ordered_discrete_observations
-    modality: ordered_discrete_symbol_sequence
-    model_parameters:
-      - transition matrix A, emission matrix B and initial distribution pi are all asserted model choices, never observations
-    notes: Its primitives are shared with no other candidate here, so it would establish a third computational family rather than extend either existing one.
-    observation_requirements:
-      - an ordered sequence of discrete symbols
-      - a stable mapping from observed symbol to alphabet index
-    ordering_requirements: required_and_significant
-    primitives_missing:
-      - dynamic_programming
-      - argmax
-      - backtracking
-    primitives_required:
-      - dynamic_programming
-      - reductions
-      - argmax
-      - backtracking
-    required_metadata:
-      - observation_alphabet_identity
-    status_in_scl: NOT_IMPLEMENTED
-    structured_data_requirements: none
-    uncertainty_requirements: none
+    "ordering_requirements": "required_and_significant"
+    "primitives_missing":
+      - "numerical_integration"
+      - "numerical_differentiation"
+      - "state_transitions"
+    "primitives_required":
+      - "reductions"
+      - "numerical_integration"
+      - "numerical_differentiation"
+      - "state_transitions"
+    "required_metadata":
+      - "units_of_measured_variable"
+    "status_in_scl": "NOT_IMPLEMENTED"
+    "structured_data_requirements": "none"
+    "uncertainty_requirements": "none"
+  "viterbi":
+    "blocking_requirements": []
+    "computational_parameters":
+      - "log_space_or_linear"
+      - "tie_breaking_rule"
+      - "precision"
+    "condition_requirements": "none_required"
+    "minimum_observation_fields":
+      - "ordered_discrete_observations"
+    "modality": "ordered_discrete_symbol_sequence"
+    "model_parameters":
+      - "transition matrix A, emission matrix B and initial distribution pi are all asserted model choices, never observations"
+    "notes": "Its primitives are shared with no other candidate here, so it would establish a third computational family rather than extend either existing one."
+    "observation_requirements":
+      - "an ordered sequence of discrete symbols"
+      - "a stable mapping from observed symbol to alphabet index"
+    "ordering_requirements": "required_and_significant"
+    "primitives_missing":
+      - "dynamic_programming"
+      - "argmax"
+      - "backtracking"
+    "primitives_required":
+      - "dynamic_programming"
+      - "reductions"
+      - "argmax"
+      - "backtracking"
+    "required_metadata":
+      - "observation_alphabet_identity"
+    "status_in_scl": "NOT_IMPLEMENTED"
+    "structured_data_requirements": "none"
+    "uncertainty_requirements": "none"

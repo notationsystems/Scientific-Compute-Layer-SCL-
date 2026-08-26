@@ -10,7 +10,7 @@ traceability guarantee fails.
     anchors/aliases: forbidden (this emitter cannot produce them)
     floats:        shortest round-trip repr; no padded zeros; exponent only
                    when |x| < 1e-4 or |x| >= 1e16
-    strings:       double-quoted only where the spec requires it
+    strings:       ALWAYS double-quoted, values and keys alike
     encoding:      UTF-8, LF line endings, single trailing newline
     hash:          sha256 over the serialized bytes
     reference:     "sha256:<hex>"
@@ -23,6 +23,25 @@ identical file. `canonicalization_fixture.yaml` + `.sha256` in this
 directory are the shared agreement fixture -- run
 `python3 canonical_yaml.py --verify-fixture` in either repository; both
 must print the same digest before Phase 2 is considered complete.
+
+WHY STRINGS ARE ALWAYS QUOTED. The original rule was "double-quoted only
+where the spec requires it", and that rule was the defect. YAML implicit
+type resolution lets two CONFORMANT parsers agree on the bytes and
+disagree on a scalar's TYPE, so a byte-identical artifact can hash-bind a
+different typed structure on each side -- the exact failure this pinning
+exists to prevent. Measured across the shared serializer: 6 of 20 scalars
+diverged (ISO date, ISO datetime, sexagesimal `1:30:00`, hex `0x1F`,
+`.inf`, `.nan`), and the ones that passed did so INCIDENTALLY, caught by
+the emitter's numeric-and-reserved-word checks rather than by any rule
+closing the class -- `0o777` passed only because PyYAML's 1.1 resolver
+does not know that form, and a 1.1-era emitter on the other side would
+resolve `yes`/`no`/`on`/`off` to bool.
+
+Unconditional quoting closes the whole class in one rule. It is
+deliberately EMITTER-SIDE: a reader-side normalization would make the
+artifact's meaning depend on which reader opened it, which is the defect
+restated rather than fixed. See architecture/canonicalization_defect.yaml
+in the acquisition repository for the full measurement.
 
 ONE DOCUMENTED EXCEPTION to "block style only": an empty mapping or
 sequence has no block form in YAML, so `{}` / `[]` are emitted. Prefer
@@ -38,44 +57,12 @@ import pathlib
 import sys
 from typing import Any, List, Mapping, Sequence
 
-_INDICATORS = set("-?:,[]{}#&*!|>'\"%@`")
-_RESERVED_PLAIN = {
-    "true", "false", "null", "yes", "no", "on", "off", "~", "y", "n",
-    "True", "False", "Null", "NULL", "TRUE", "FALSE", "None",
-}
-
-
-def _is_numeric_looking(text: str) -> bool:
-    try:
-        int(text)
-        return True
-    except ValueError:
-        pass
-    try:
-        float(text)
-        return True
-    except ValueError:
-        return False
-
-
-def _needs_quoting(text: str) -> bool:
-    """True when plain (unquoted) style would be unsafe or ambiguous."""
-    if text == "":
-        return True
-    if text.strip() != text:
-        return True
-    if text in _RESERVED_PLAIN or text.lower() in _RESERVED_PLAIN:
-        return True
-    if _is_numeric_looking(text):
-        return True
-    if text[0] in _INDICATORS:
-        return True
-    if ": " in text or " #" in text or text.endswith(":"):
-        return True
-    if any(ch in text for ch in "\n\r\t\x00"):
-        return True
-    return False
-
+#: The conditional-quoting helpers that used to live here
+#: (`_needs_quoting`, `_is_numeric_looking`, an indicator set and a
+#: reserved-word set) are GONE, deliberately. They were the mechanism by
+#: which several trap scalars passed incidentally, and keeping them beside
+#: an unconditional rule would leave a second, weaker path that a later
+#: edit could re-enable. One rule, no exceptions, nothing to re-enable.
 
 def _quote(text: str) -> str:
     escaped = (
@@ -127,7 +114,7 @@ def _format_scalar(value: Any) -> str:
     if isinstance(value, float):
         return _format_float(value)
     if isinstance(value, str):
-        return _quote(value) if _needs_quoting(value) else value
+        return _quote(value)
     raise TypeError(f"unsupported scalar type for canonical YAML: {type(value).__name__}")
 
 
@@ -141,7 +128,7 @@ def _emit(value: Any, indent: int, lines: List[str]) -> None:
             if not isinstance(key, str):
                 raise TypeError(f"canonical YAML requires string keys, got {type(key).__name__}")
             child = value[key]
-            key_text = _quote(key) if _needs_quoting(key) else key
+            key_text = _quote(key)
             if isinstance(child, (Mapping, list, tuple)) and child:
                 lines.append(f"{pad}{key_text}:")
                 _emit(child, indent + 1, lines)
@@ -221,6 +208,33 @@ FIXTURE = {
         "plain": "plain_scalar_is_unquoted",
         "reserved": "true",
         "unicode": "ångström",
+    },
+    #: The implicit-typing trap scalars, pinned in the SHARED fixture so
+    #: the class is exercised by the agreement check itself rather than
+    #: only by one repository's tests. Six of these DIVERGED under the old
+    #: "quote only where required" rule -- two parsers agreeing on bytes
+    #: and disagreeing on type. The rest passed INCIDENTALLY, via the
+    #: emitter's old numeric-and-reserved-word checks, and are pinned for
+    #: exactly that reason: an incidental pass is the one that regresses
+    #: silently when a parser is upgraded.
+    "implicit_typing_traps": {
+        "hex": "0x1F",
+        "inf": ".inf",
+        "iso_date": "2026-08-25",
+        "iso_datetime": "2026-08-25T12:00:00Z",
+        "nan": ".nan",
+        "octal_new": "0o777",
+        "octal_old": "007",
+        "off": "off",
+        "on": "on",
+        "plus_signed": "+5",
+        "sexagesimal": "1:30:00",
+        "tilde": "~",
+        "underscored": "1_000",
+        "word_no": "no",
+        "word_null": "null",
+        "word_true": "True",
+        "word_yes": "yes",
     },
     "zzz_key_sorting_proof": "sorted last",
 }

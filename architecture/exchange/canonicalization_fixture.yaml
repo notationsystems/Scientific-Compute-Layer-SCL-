@@ -1,34 +1,52 @@
-booleans:
+"booleans":
   "no": false
   "yes": true
-empty_map_exception: {}
-empty_seq_exception: []
-floats:
-  large_exponent: 1.0e+16
-  one: 1.0
-  small_exponent: 1.0e-5
-  third: 0.3333333333333333
-  threshold_positional: 0.0001
-integers:
-  negative: -7
-  zero: 0
-nested:
-  a: first
-  b:
-    c: 1
-    d:
-      - x
+"empty_map_exception": {}
+"empty_seq_exception": []
+"floats":
+  "large_exponent": 1.0e+16
+  "one": 1.0
+  "small_exponent": 1.0e-5
+  "third": 0.3333333333333333
+  "threshold_positional": 0.0001
+"implicit_typing_traps":
+  "hex": "0x1F"
+  "inf": ".inf"
+  "iso_date": "2026-08-25"
+  "iso_datetime": "2026-08-25T12:00:00Z"
+  "nan": ".nan"
+  "octal_new": "0o777"
+  "octal_old": "007"
+  "off": "off"
+  "on": "on"
+  "plus_signed": "+5"
+  "sexagesimal": "1:30:00"
+  "tilde": "~"
+  "underscored": "1_000"
+  "word_no": "no"
+  "word_null": "null"
+  "word_true": "True"
+  "word_yes": "yes"
+"integers":
+  "negative": -7
+  "zero": 0
+"nested":
+  "a": "first"
+  "b":
+    "c": 1
+    "d":
+      - "x"
       - "y"
-nulls:
-  absent: null
-sequence_of_maps:
-  - k: 1
-  - k: 2
-strings:
-  colon_space: "needs: quoting"
-  hash: "trailing #comment-like"
-  numeric_looking: "1.5"
-  plain: plain_scalar_is_unquoted
-  reserved: "true"
-  unicode: ångström
-zzz_key_sorting_proof: sorted last
+"nulls":
+  "absent": null
+"sequence_of_maps":
+  - "k": 1
+  - "k": 2
+"strings":
+  "colon_space": "needs: quoting"
+  "hash": "trailing #comment-like"
+  "numeric_looking": "1.5"
+  "plain": "plain_scalar_is_unquoted"
+  "reserved": "true"
+  "unicode": "ångström"
+"zzz_key_sorting_proof": "sorted last"
