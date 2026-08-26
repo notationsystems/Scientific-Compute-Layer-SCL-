@@ -108,6 +108,45 @@ void require_provenance_is_coherent(const NoiseModel& noise, const char* name,
 
 }  // namespace
 
+std::vector<double> covariance_update(const std::vector<double>& p_predicted,
+                                      const std::vector<double>& gain,
+                                      const std::vector<double>& observation,
+                                      const std::vector<double>& measurement_noise,
+                                      std::size_t n,
+                                      std::size_t m) {
+    // JOSEPH FORM: P = (I - K H) P (I - K H)^T + K R K^T.
+    //
+    // The contract is stated over ANY gain, and that is the whole content
+    // of the choice. Measured against this project's own covariance gate:
+    // with the optimal K the short form (I - K H) P is INDISTINGUISHABLE
+    // from this one; with K perturbed by 1e-3 the short form reaches
+    // lambda_min = -1.994e+06 and is refused, while this stays accepted at
+    // +1.540e-02.
+    std::vector<double> IKH = matmul(gain, n, m, observation, n);
+    for (std::size_t i = 0; i < n * n; ++i) IKH[i] = -IKH[i];
+    for (std::size_t i = 0; i < n; ++i) IKH[i * n + i] += 1.0;
+
+    std::vector<double> P =
+        matmul(matmul(IKH, n, n, p_predicted, n), n, n, transpose(IKH, n, n), n);
+    const std::vector<double> KRKt =
+        matmul(matmul(gain, n, m, measurement_noise, m), n, m, transpose(gain, n, m), n);
+    for (std::size_t i = 0; i < n * n; ++i) P[i] += KRKt[i];
+
+    // LOAD-BEARING, not tidiness. Measured: Joseph alone leaves asymmetry
+    // around 7e-09 after 2000 steps, which validate_covariance REFUSES as
+    // NOT-SYMMETRIC. Joseph is symmetry-preserving in exact arithmetic and
+    // not quite in floating point, so the two mechanisms are independent
+    // and both are required.
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = i + 1; j < n; ++j) {
+            const double mean = 0.5 * (P[i * n + j] + P[j * n + i]);
+            P[i * n + j] = mean;
+            P[j * n + i] = mean;
+        }
+    }
+    return P;
+}
+
 KalmanResult run_kalman_filter(const KalmanProblem& problem,
                                const KalmanParameters& params) {
     const std::size_t n = problem.state_dimension;
@@ -213,32 +252,7 @@ KalmanResult run_kalman_filter(const KalmanProblem& problem,
         const std::vector<double> Kv = matmul(K, n, m, v, 1);
         for (std::size_t i = 0; i < n; ++i) x[i] = x_pred[i] + Kv[i];
 
-        // JOSEPH FORM. P = (I - K H) P (I - K H)^T + K R K^T. The short
-        // form (I - K H) P is algebraically identical and is not
-        // symmetry-preserving in floating point; a filter that loses PSD
-        // after a few hundred steps returns plausible wrong answers rather
-        // than an error, which is the failure mode this substrate is built
-        // to make visible rather than to risk.
-        std::vector<double> IKH = matmul(K, n, m, H, n);
-        for (std::size_t i = 0; i < n * n; ++i) IKH[i] = -IKH[i];
-        for (std::size_t i = 0; i < n; ++i) IKH[i * n + i] += 1.0;
-        const std::vector<double> IKHt = transpose(IKH, n, n);
-        const std::vector<double> Kt = transpose(K, n, m);
-
-        P = matmul(matmul(IKH, n, n, P_pred, n), n, n, IKHt, n);
-        const std::vector<double> KRKt = matmul(matmul(K, n, m, R, m), n, m, Kt, n);
-        for (std::size_t i = 0; i < n * n; ++i) P[i] += KRKt[i];
-
-        // Force exact symmetry. Joseph form preserves it to roundoff, not
-        // to the bit; symmetrising costs nothing and keeps the posterior
-        // inside the contract its own validator would apply.
-        for (std::size_t i = 0; i < n; ++i) {
-            for (std::size_t j = i + 1; j < n; ++j) {
-                const double mean = 0.5 * (P[i * n + j] + P[j * n + i]);
-                P[i * n + j] = mean;
-                P[j * n + i] = mean;
-            }
-        }
+        P = covariance_update(P_pred, K, H, R, n, m);
 
         std::copy(x.begin(), x.end(), result.states.begin() + k * n);
         std::copy(P.begin(), P.end(), result.covariances.begin() + k * n * n);

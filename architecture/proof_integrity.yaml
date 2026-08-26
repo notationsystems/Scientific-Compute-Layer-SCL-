@@ -67,6 +67,16 @@ instances:
     the_question_that_separates_them: "does this repair change the RULE, or extend the LIST? Extending the list is legitimate only when the list IS the rule -- a fault-code vocabulary, a registry of operations. When the list is standing in for a property, the property is the repair."
     found_by: "applying coverage_specified_by_enumeration's own repair rule to a fix that had already been accepted"
 
+  - name: a_justification_that_named_the_wrong_property
+    target: "is this design choice justified?"
+    subject: "does the stated reason sound like a reason?"
+    what_happened: "the Joseph covariance update was chosen over the short form (I - K H) P on the stated grounds that the short form 'quietly loses PSD after a few hundred steps'. Mutation-tested, the short form survived every test in the operation. Measured across seven regimes: at the OPTIMAL gain the two forms are indistinguishable to every printed digit, so the step-count claim was simply false. The real guarantee is about the GAIN, not about time -- Joseph holds for any K, and the short form is a valid covariance only when K is exactly optimal. With K perturbed by 1e-3 the short form reaches lambda_min = -1.994e+06 while Joseph stays at +1.540e-02."
+    why_the_mutant_survived: "not a missing assertion so much as a MISSING CASE. Nothing in the suite operated in the regime where the choice can matter, and within this operation nothing can: K is computed from an exact inverse, so it is optimal to roundoff -- twelve orders below where the forms diverge."
+    repair: "state the contract over the property and test it where the property is visible. The update is now a named function whose contract is 'for any K, the result is a valid covariance whenever P_pred is', tested by calling it with deliberately suboptimal gains and judging the result with this project's own covariance gate. Deliberately NOT a test that Joseph is used: pinning an implementation is not testing a property."
+    and_the_choice_was_re_justified_honestly: "Joseph is kept as a ROBUSTNESS MARGIN rather than as a fix for a live defect -- a fixed or steady-state gain, a replayed gain, a truncated inverse or a reduced-precision backend all produce a suboptimal K, and each is a change to how K is MADE rather than to the update. Claiming more than that is what the first version claimed."
+    severity: a_real_property_defended_by_a_false_reason
+    the_second_finding_underneath_it: "the same sweep showed the explicit symmetrisation is LOAD-BEARING, not tidiness: Joseph alone leaves 1.41e-08 asymmetry after 2000 steps and is refused by the covariance gate as NOT-SYMMETRIC. Two independent mechanisms, and removing symmetrisation then survived the perturbed-gain test -- because a suboptimal gain keeps P large and the RELATIVE symmetry budget loose. It needed the optimal-gain regime, where the covariance converges small and the budget tightens with it. Two mechanisms, two regimes, and the second was found by mutation rather than by design."
+
   - name: an_enforcement_claim_that_names_a_file_saying_nothing_about_it
     target: "is this invariant enforced?"
     subject: "does the ledger name a test file that exists?"
@@ -144,7 +154,7 @@ coverage_specified_by_enumeration:
   how_to_tell_you_are_in_it: "the check NAMES what it looks at instead of deriving it."
   why_it_is_the_sharpest: "a check specified by enumeration is correct exactly until the world grows an item nobody added to the list, and it fails SILENTLY at that moment -- it reports success, because the thing it enumerates is still fine. No coverage at all leaves a visible hole; coverage-by-enumeration reports green over the hole, and the green is then cited as evidence."
   its_repair_rule_is_adopted_for_the_whole_class: "ASSERT THE PROPERTY, NOT THE ENUMERATION. Sharper than the general diagnostic below and strictly stronger where it applies: adding the missing item fixes one instance, asserting the property fixes the class. The shadow guard follows it -- it refuses any module binding a test name twice, over every module found, rather than checking the files known to have had the problem."
-  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the nine instances below, each measured, not the fact that two authors named it."
+  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 12 instances below, each measured, not the fact that two authors named it."
 
 # ------------------------------------------------------- the pattern --
 

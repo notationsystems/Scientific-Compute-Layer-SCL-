@@ -22,43 +22,54 @@
 //
 //     P = (I - K H) P (I - K H)^T + K R K^T
 //
-// rather than the shorter P = (I - K H) P. Algebraically identical in
-// exact arithmetic; different in floating point.
+// rather than the shorter P = (I - K H) P.
 //
-// THE FIRST VERSION OF THIS COMMENT OVERSTATED THE CASE, and the
-// correction is kept visible because the overstatement is the more
-// instructive half. It said the short form "quietly loses PSD after a few
-// hundred steps". Measured, across six regimes, n = 2 with a scalar
-// measurement and P0 = 1e10:
+// THE JUSTIFICATION FIRST WRITTEN HERE WAS WRONG, AND THE CORRECTION IS
+// KEPT VISIBLE because the shape of the error matters more than the fix.
+// It claimed the short form "quietly loses PSD after a few hundred
+// steps". Replacing Joseph with the short form was then mutation-tested
+// and SURVIVED every test in this operation -- a property chosen for a
+// stated reason with nothing testing it.
 //
-//   r      q      steps    JOSEPH lambda_min   SHORT lambda_min
-//   0.25   0.01    2000    2.125e-02           2.125e-02   IDENTICAL
-//   1e-16  0       5000    2.401e-27           0.000e+00
-//   1e-18  0       5000    2.401e-29           0.000e+00
-//   1e-20  0      20000    3.750e-33           0.000e+00
-//   1e-22  0      50000    2.400e-36           0.000e+00
-//   1e-30  0      50000    2.400e-44           0.000e+00
+// MEASURED, four variants x seven regimes, verdicts from this project's
+// own covariance gate rather than from a threshold invented for the
+// occasion (n = 3, diffuse P0):
 //
-// So: in any benign regime the two forms are INDISTINGUISHABLE, and the
-// "few hundred steps" claim was wrong. What the short form actually does,
-// consistently, is drive the covariance SINGULAR -- lambda_min reaches
-// exactly zero -- where Joseph retains a small positive value. No regime
-// was found in which it goes NEGATIVE. Loss of rank, not indefiniteness.
+//   optimal K, r=0.25 q=0.01, 2000 steps
+//       joseph  lambda_min  1.540e-02   accepted
+//       short   lambda_min  1.540e-02   accepted     IDENTICAL
 //
-// That is still worth the extra n x n multiply: a singular P means the
-// filter has concluded it knows one direction of the state perfectly, and
-// from there the gain in that direction is identically zero and no further
-// measurement can correct it. The failure is silent and permanent, which
-// is the same argument that elected SVD for least_squares -- applied to
-// the recursion rather than the solve -- but it is a smaller claim than
-// the one first written here.
+//   K perturbed by 1e-3, same regime
+//       joseph  lambda_min  1.540e-02   accepted
+//       short   lambda_min -1.994e+06   NOT-PSD
 //
-// THE CHOICE IS ENFORCED, NOT ASSERTED. Replacing Joseph with the short
-// form was mutation-tested and SURVIVED every test in this operation,
-// because none of them ran a regime where the two differ. That is a
-// stated-but-unenforced property, in code written the same hour as the
-// rule against them (architecture/proof_integrity.yaml). The regime above
-// is now a test.
+//   K perturbed by 1e-1                 short: -1.282e+08   NOT-PSD
+//   K perturbed by 0.5                  short: -9.549e+08   NOT-PSD
+//
+// So the real guarantee is NOT about step count and NOT about roundoff.
+// It is that Joseph holds for ANY GAIN, optimal or not, while
+// (I - K H) P is only a valid covariance when K is exactly optimal. With
+// the optimal K in float64 the two are indistinguishable, which is
+// precisely why the mutant survived: nothing in the suite ran a regime
+// where the choice can matter.
+//
+// AND WITHIN THIS OPERATION, AS WRITTEN, IT CANNOT. K is computed from an
+// exact inverse of S, so the gain is optimal to roundoff -- a perturbation
+// of 1e-16, twelve orders below where the forms diverge. Joseph is
+// therefore a ROBUSTNESS MARGIN here, not a fix for a live defect, and it
+// is kept deliberately on that basis: a fixed or steady-state gain, a
+// replayed gain, a truncated inverse, or a reduced-precision backend all
+// produce a suboptimal K, and each is a change to how K is made rather
+// than to the update -- so the update should not be the thing that breaks.
+// Stated as a margin rather than as a defect avoided, because claiming
+// more than that is what the first version of this comment did.
+//
+// SYMMETRISATION IS LOAD-BEARING, NOT BELT-AND-BRACES. Measured in the
+// same sweep: Joseph WITHOUT the explicit symmetrise step reaches an
+// asymmetry of 7.45e-09 and is REFUSED by this project's own covariance
+// gate as NOT-SYMMETRIC. Joseph is symmetry-preserving in exact
+// arithmetic and not quite in floating point. The two mechanisms are
+// independent and both are required.
 //
 // THE THIRD IDENTITY AXIS (docs/SCL_CONTRACT.md 6.3). Q and R both
 // participate, and they are NOT the same kind of asserted: R may be
@@ -137,6 +148,32 @@ public:
 private:
     std::string what_;
 };
+
+//: The covariance update, as its own function so its CONTRACT can be
+//: stated and tested over any gain:
+//:
+//:     FOR ANY K, the result is a valid covariance whenever P_pred is.
+//:
+//: That is the property Joseph actually provides, and it is what this
+//: returns. It is deliberately NOT a test that "Joseph is used" -- pinning
+//: an implementation is not testing a property, and a later equivalent
+//: form should be free to replace it while the contract holds.
+//:
+//: Exposed rather than inlined because the operation itself only ever
+//: supplies the OPTIMAL K, under which every update form agrees. Testing
+//: the guarantee therefore requires a suboptimal gain, and the honest way
+//: to supply one is to call the real function with it -- not to add a
+//: perturbation knob to the operation so a test can reach it.
+//:
+//: Includes the explicit symmetrisation, which the same measurement showed
+//: is load-bearing: Joseph alone leaves asymmetry around 7e-09, which this
+//: project's own covariance gate refuses.
+std::vector<double> covariance_update(const std::vector<double>& p_predicted,
+                                      const std::vector<double>& gain,
+                                      const std::vector<double>& observation,
+                                      const std::vector<double>& measurement_noise,
+                                      std::size_t state_dimension,
+                                      std::size_t measurement_dimension);
 
 //: Runs the filter. Throws KalmanValidationError on any contract breach --
 //: a shape mismatch, a covariance that fails any of the five rules, or a
