@@ -1,6 +1,20 @@
 "booleans":
   "no": false
   "yes": true
+"collection_shapes":
+  "empty_map_in_a_sequence":
+    - {}
+    - "a": 1
+  "empty_seq_under_a_key_in_a_sequence":
+    - "a": []
+  "map_in_seq_in_map_in_seq":
+    - "a":
+        - 1
+        - 2
+  "seq_under_a_key_in_a_map_in_a_seq":
+    - "b":
+        "c":
+          - "x"
 "empty_map_exception": {}
 "empty_seq_exception": []
 "floats":

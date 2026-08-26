@@ -306,3 +306,102 @@ def test_unresolved_edges_are_recorded_with_why_they_are_not_solved_here():
     spectral = edges["comparability_is_weaker_than_identity"]
     assert "not comparable as spectra" in spectral["edge"].lower()
     assert "annotating" in spectral["rule_needed_when_a_comparison_layer_exists"].lower()
+
+
+# ================================================ the COLLECTION class (§2.1)
+#
+# The always-quote rule closed the ambiguity class one level down, among
+# scalars. This is the same defect one level up, measured after that fix
+# landed and repaired the same way: emitter-side, by refusing the form.
+
+
+def test_a_sequence_nested_directly_in_a_sequence_is_refused():
+    """MEASURED BEFORE THE REFUSAL. `canonical_dump({"k": [["a"], ["b"]]})`
+    emitted the compact block form `- - "a"`, which is valid YAML 1.2 that
+    the two readers in this pair TYPE DIFFERENTLY: PyYAML returns
+    `[["a"], ["b"]]`, the minimal reader returns the strings
+    `['- "a"', '- "b"']`. Same bytes, same digest, two different values --
+    exactly the condition pinning the encoding exists to rule out.
+
+    The repair is emitter-side because there is no shape both accept:
+    written out long, the minimal reader RAISES on the bare `-` rather
+    than mistyping it. Teaching one reader to parse the compact form
+    would leave the bytes ambiguous for every other reader, which
+    relocates the problem instead of removing it -- the same argument
+    that made the scalar fix emitter-side."""
+    for shape in ([["a"], ["b"]], [[], [1]], [(1,)], [1, ["x"]]):
+        with pytest.raises(TypeError, match="sequence nested directly in a sequence"):
+            cy.canonical_dump({"k": shape})
+
+
+def test_the_refusal_is_narrow_and_the_legal_shapes_still_emit():
+    """A mapping inside a sequence, and a sequence inside a mapping, are
+    both fine and unaffected. Only sequence-directly-inside-sequence is
+    refused, so the refusal costs nothing any real artifact does."""
+    for document in (
+        {"k": ["a", "b"]},
+        {"k": [{"a": 1}, {"b": 2}]},
+        {"k": {"a": {"b": 1}}},
+        {"k": [{"a": [1, 2]}]},
+        {"k": [{}, {"a": 1}]},
+        {"k": {"a": {}, "b": []}},
+        {"k": [{"b": {"c": ["x"]}}]},
+    ):
+        assert yaml.safe_load(cy.canonical_dump(document)) == document
+
+
+def test_the_fixture_pins_the_collection_class_not_only_scalars():
+    """The scalar class is pinned by `implicit_typing_traps`. Until Phase
+    37 nothing pinned the shapes where the block renderer's dash-collapse
+    actually runs, which is where the divergence lived."""
+    shapes = cy.FIXTURE["collection_shapes"]
+    assert set(shapes) == {
+        "empty_map_in_a_sequence",
+        "empty_seq_under_a_key_in_a_sequence",
+        "map_in_seq_in_map_in_seq",
+        "seq_under_a_key_in_a_map_in_a_seq",
+    }
+    for value in shapes.values():
+        assert yaml.safe_load(cy.canonical_dump({"v": value}))["v"] == value
+
+
+# ==================================================== the ESCAPE class (§2.1)
+#
+# A different defect from the two above, and the difference decides the
+# repair. The bytes here have exactly ONE correct meaning under YAML 1.2
+# and this repository's reader (PyYAML) already returns it. The
+# divergence was on the DAQ side, whose dependency-free minimal reader
+# left every escape as literal characters -- so it was repaired THERE,
+# reader-side, and no artifact or digest moved. Pinned here anyway,
+# because the emitter that produces these escapes is shared and a change
+# to it would reopen the class on both sides.
+
+
+@pytest.mark.parametrize("value", [
+    'he said "x"', "a\\b", 'a\\"b', "a\nb", "a\tb", "a\rb",
+    "C:\\Users\\x", 'he said "hi" # not a comment', 'he said "hi": and more',
+    "\\", 'ends with "', "",
+])
+def test_every_escape_the_emitter_can_produce_round_trips_identically(value):
+    """`_quote` escapes exactly five sequences -- backslash, double quote,
+    newline, carriage return, tab -- and the always-quote rule sends EVERY
+    string through it. So any value containing one of those arrives at the
+    reader escaped, and until Phase 37 the DAQ repository's minimal reader
+    returned it with the backslashes still in place."""
+    text = cy.canonical_dump({"k": value})
+    assert yaml.safe_load(text)["k"] == value
+
+
+def test_escaped_keys_round_trip_too():
+    document = {'a "b"': 1, "c\\d": 2}
+    assert yaml.safe_load(cy.canonical_dump(document)) == document
+
+
+def test_the_emitter_refuses_a_non_finite_float():
+    """Checked here rather than assumed: the shared serializer is already
+    clean on the axis that produced the NaN finding elsewhere in this
+    phase. `_format_float` raises rather than emitting `.nan`/`.inf`,
+    which is the same writer-side rule applied one layer down."""
+    for value in (float("nan"), float("inf"), float("-inf")):
+        with pytest.raises(ValueError, match="non-finite"):
+            cy.canonical_dump({"k": value})

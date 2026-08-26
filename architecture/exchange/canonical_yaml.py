@@ -142,10 +142,42 @@ def _emit(value: Any, indent: int, lines: List[str]) -> None:
             lines[-1] += " []"
             return
         for item in value:
-            if isinstance(item, (Mapping, list, tuple)) and item:
+            if isinstance(item, (list, tuple)):
+                # A SEQUENCE DIRECTLY INSIDE A SEQUENCE IS REFUSED.
+                #
+                # Measured, and it is the scalar-ambiguity defect one level
+                # up. This emitter rendered it compactly as `- - "a"`, which
+                # is valid block-style YAML that the two readers in this pair
+                # TYPE DIFFERENTLY: PyYAML returns [["a"]], while the minimal
+                # reader returns the STRING '- "a"'. Same bytes, same
+                # digest, two different values -- which is exactly what
+                # pinning the encoding exists to prevent.
+                #
+                # There is no emitted form that both accept: written out
+                # long, the minimal reader RAISES on the bare `-` instead of
+                # mistyping it. So the canonical answer is the one the scalar
+                # rule already took -- refuse the ambiguous form at the
+                # WRITER. Teaching one reader to parse it would leave the
+                # bytes ambiguous for every other reader, which relocates the
+                # problem rather than fixing it.
+                #
+                # Narrow on purpose: a mapping inside a sequence is fine and
+                # is unaffected, as is a sequence inside a mapping. Only
+                # sequence-directly-inside-sequence is refused.
+                raise TypeError(
+                    "canonical YAML refuses a sequence nested directly in a sequence: the "
+                    "compact form is typed differently by the two readers in this pair, and "
+                    "the expanded form is unparseable by one of them. Wrap each inner "
+                    "sequence in a mapping that names it."
+                )
+            if isinstance(item, Mapping) and item:
                 lines.append(f"{pad}-")
                 _emit(item, indent + 1, lines)
                 # collapse "-\n  key:" into "- key:" for the common case
+                _collapse_dash(lines, indent)
+            elif isinstance(item, Mapping):
+                lines.append(f"{pad}-")
+                _emit(item, indent + 1, lines)
                 _collapse_dash(lines, indent)
             else:
                 lines.append(f"{pad}- {_format_scalar(item)}")
@@ -188,6 +220,19 @@ def file_sha256(path: pathlib.Path) -> str:
 
 FIXTURE = {
     "booleans": {"no": False, "yes": True},
+    # The COLLECTION class, pinned the way implicit_typing_traps pins the
+    # scalar class. The scalar rule (always quote) closed ambiguity one
+    # level down; these are the shapes where the block renderer's
+    # dash-collapse actually runs, and where a sequence nested directly in
+    # a sequence was measured to type differently under the two readers.
+    # That shape is now REFUSED by the emitter, so it cannot appear here as
+    # data -- it is pinned as a refusal in each repository's suite instead.
+    "collection_shapes": {
+        "empty_map_in_a_sequence": [{}, {"a": 1}],
+        "empty_seq_under_a_key_in_a_sequence": [{"a": []}],
+        "map_in_seq_in_map_in_seq": [{"a": [1, 2]}],
+        "seq_under_a_key_in_a_map_in_a_seq": [{"b": {"c": ["x"]}}],
+    },
     "empty_map_exception": {},
     "empty_seq_exception": [],
     "floats": {
