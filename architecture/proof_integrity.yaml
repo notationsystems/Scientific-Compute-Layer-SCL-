@@ -77,6 +77,24 @@ instances:
     severity: a_real_property_defended_by_a_false_reason
     the_second_finding_underneath_it: "the same sweep showed the explicit symmetrisation is LOAD-BEARING, not tidiness: Joseph alone leaves 1.41e-08 asymmetry after 2000 steps and is refused by the covariance gate as NOT-SYMMETRIC. Two independent mechanisms, and removing symmetrisation then survived the perturbed-gain test -- because a suboptimal gain keeps P large and the RELATIVE symmetry budget loose. It needed the optimal-gain regime, where the covariance converges small and the budget tightens with it. Two mechanisms, two regimes, and the second was found by mutation rather than by design."
 
+  - name: a_claim_about_the_OTHER_repository_has_no_witness_at_home
+    target: "is what this artifact says about the sibling true?"
+    subject: "nothing -- every check is scoped to one repository"
+    what_happened: "scl_requirements.yaml said generation_depth_bounded is 'declared with status vacuously_enforced'. The acquisition layer corrected that to represented_unenforced, then to enforced when it closed the row. The compute layer's artifact was TWO corrections behind, both suites green, and the sibling had REPORTED the staleness rather than editing another repository's artifact -- the correct boundary, and also the reason the report had nowhere to land except prose."
+    why_the_self_description_check_could_not_reach_it: "that check verifies an artifact against ITS OWN encoding, where the artifact and the thing described are the same object, so the artifact's bytes are their own evidence. A claim about the SIBLING has its evidence in another repository. No check scoped to one artifact can reach it, and every check this pair had built was so scoped."
+    repair: "tests/test_cross_repository_claims.py, in the acquisition repository because it is the only side holding both the mirrored artifact and its own invariant ledger. Invariant ids and the status vocabulary are DERIVED from that ledger, so an invariant added later is covered without anyone adding it."
+    the_distinction_the_check_had_to_preserve: "a superseded status is not automatically a defect -- this pair deliberately retains dated measurements. So a superseded status RETAINED WITH THE CURRENT ONE STATED BESIDE IT passes, and a superseded status STANDING ALONE fails. Both are expressible and only one is a defect."
+    severity: two_corrections_behind_with_every_suite_green
+
+  - name: one_party_two_names_and_nothing_joined_on_the_token
+    target: "did the response answer the rows addressed to it?"
+    subject: "do the owner strings match?"
+    what_happened: "the acquisition layer calls itself `daf` in all six of its own artifacts; the compute layer addresses all eight of its requirement rows to `daq`. Both internally consistent, so NO CHECK INSIDE EITHER REPOSITORY COULD SEE IT. It became visible the first time something JOINED on the token, which was the cross-repository check above, on its first run."
+    the_failure_mode_it_would_have_had: "matching rows by owner would have selected NONE, and an empty answered set compares equal to an empty upstream set -- so the artifact would have read as fully answered while answering nothing. A vacuous pass produced by a vocabulary mismatch rather than by an empty domain."
+    repair: "the party declares its own correspondence -- `also_known_as` in the acquisition layer's own artifact -- and the check reads it rather than assuming identity. Not fixed by renaming: it is that repository's own name, so the counterparty renaming its rows would be one side deciding the other's identity, and both tokens sit in hash-bound artifacts. The check also asserts the upstream set is non-empty, so the vacuous path is closed independently of the naming."
+    a_case_where_a_list_IS_the_property: "a two-entry party vocabulary is closed -- there are two parties -- so a declaration here is not an enumeration standing in for a property. Recorded because this file otherwise reads as if every list were a defect."
+    severity: a_vacuous_pass_waiting_for_the_first_join
+
   - name: an_enforcement_claim_that_names_a_file_saying_nothing_about_it
     target: "is this invariant enforced?"
     subject: "does the ledger name a test file that exists?"
@@ -191,7 +209,7 @@ coverage_specified_by_enumeration:
   how_to_tell_you_are_in_it: "the check NAMES what it looks at instead of deriving it."
   why_it_is_the_sharpest: "a check specified by enumeration is correct exactly until the world grows an item nobody added to the list, and it fails SILENTLY at that moment -- it reports success, because the thing it enumerates is still fine. No coverage at all leaves a visible hole; coverage-by-enumeration reports green over the hole, and the green is then cited as evidence."
   its_repair_rule_is_adopted_for_the_whole_class: "ASSERT THE PROPERTY, NOT THE ENUMERATION. Sharper than the general diagnostic below and strictly stronger where it applies: adding the missing item fixes one instance, asserting the property fixes the class. The shadow guard follows it -- it refuses any module binding a test name twice, over every module found, rather than checking the files known to have had the problem."
-  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 12 instances below, each measured, not the fact that two authors named it."
+  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 14 instances below, each measured, not the fact that two authors named it."
 
 # ------------------------------------------------------- the pattern --
 

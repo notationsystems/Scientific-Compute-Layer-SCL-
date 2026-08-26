@@ -1,3 +1,4 @@
+"also_known_as": "daq, in the compute layer's requirements artifact"
 "artifact": "daq_requirement_response"
 "extends": "core@1.0.0"
 "generated_by": "architecture/exchange/build_daq_requirement_response.py"
@@ -37,3 +38,4 @@
     "what_the_requirement_asked": "DAQ must be able to express a measurement covariance R, not only a scalar uncertainty per observation. A scalar is sufficient ONLY when the measurement is genuinely 1-D and uncorrelated; for a measurement vector it discards the off-diagonal terms that determine how the filter weights components against each other."
 "rows_addressed_are_derived_not_listed": "both DAQ-owned blocking rows the requirements artifact lists for this workload. The count is taken from the artifact programmatically rather than from prose -- a subset read as the set is a mistake this pair has now made three times."
 "states_no_status": "deliberately. Every row carries what DAQ built, what it measured and how to re-run it, and stops. The status of a requirement in your artifact is yours to set; writing SATISFIED here would be DAQ answering your question about your own requirement."
+"the_names_are_one_party": true
