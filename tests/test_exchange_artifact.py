@@ -315,22 +315,31 @@ def test_unresolved_edges_are_recorded_with_why_they_are_not_solved_here():
 # landed and repaired the same way: emitter-side, by refusing the form.
 
 
-def test_a_sequence_nested_directly_in_a_sequence_is_refused():
-    """MEASURED BEFORE THE REFUSAL. `canonical_dump({"k": [["a"], ["b"]]})`
-    emitted the compact block form `- - "a"`, which is valid YAML 1.2 that
-    the two readers in this pair TYPE DIFFERENTLY: PyYAML returns
-    `[["a"], ["b"]]`, the minimal reader returns the strings
-    `['- "a"', '- "b"']`. Same bytes, same digest, two different values --
-    exactly the condition pinning the encoding exists to rule out.
+def test_a_sequence_inside_a_sequence_is_refused_at_the_writer():
+    """The measured divergence, closed at the writer rather than by
+    teaching one reader to cope. The divergence was between PyYAML and the
+    ACQUISITION repository's dependency-free reader, which is not present
+    here -- so the refusal is what this suite can check, and it checks it
+    because the emitter is shared and a change to it reopens the class on
+    both sides."""
+    with pytest.raises(TypeError, match="sequence directly inside a sequence"):
+        cy.canonical_dump({"k": [[1, 2], [3]]})
 
-    The repair is emitter-side because there is no shape both accept:
-    written out long, the minimal reader RAISES on the bare `-` rather
-    than mistyping it. Teaching one reader to parse the compact form
-    would leave the bytes ambiguous for every other reader, which
-    relocates the problem instead of removing it -- the same argument
-    that made the scalar fix emitter-side."""
-    for shape in ([["a"], ["b"]], [[], [1]], [(1,)], [1, ["x"]]):
-        with pytest.raises(TypeError, match="sequence nested directly in a sequence"):
+    # the documented alternative round-trips
+    wrapped = {"k": [{"row": [1, 2]}]}
+    assert yaml.safe_load(cy.canonical_dump(wrapped)) == wrapped
+
+
+def test_the_refusal_also_covers_the_shapes_that_used_to_CRASH_the_emitter():
+    """The refusal above is the divergence case. These are the cases that
+    were not a divergence at all -- the emitter could not represent them.
+    An empty collection nested in a sequence fell through to the scalar
+    formatter and raised `unsupported scalar type for canonical YAML:
+    list`, so a legal document shape had no canonical form. They now hit
+    the same named refusal, which is the difference between "we decided
+    not to encode this" and "we did not notice"."""
+    for shape in ([[], [1]], [(1,)], [1, ["x"]], [{"a": 1}, ["b"]]):
+        with pytest.raises(TypeError, match="sequence directly inside a sequence"):
             cy.canonical_dump({"k": shape})
 
 
@@ -355,11 +364,74 @@ def test_the_fixture_pins_the_collection_class_not_only_scalars():
     37 nothing pinned the shapes where the block renderer's dash-collapse
     actually runs, which is where the divergence lived."""
     shapes = cy.FIXTURE["collection_shapes"]
-    assert set(shapes) == {
-        "empty_map_in_a_sequence",
+    assert len(shapes) >= 8, "the fixture pinned no collection shapes before this"
+    text = cy.canonical_dump(cy.FIXTURE)
+    assert yaml.safe_load(text)["collection_shapes"] == shapes
+    assert repo_loads(text)["collection_shapes"] == shapes
+
+
+# ---------------- the escape class, and the two shapes only this half pinned
+#
+# The collection tests above came from the other half of this reissue, which
+# reached the same refusal independently and swept it across both parsers more
+# thoroughly. What follows is what only this half measured: a THIRD class,
+# beside the collection one and wider, plus the narrowness check and the
+# non-finite guard.
+
+
+def test_the_refusal_also_covers_the_shapes_that_used_to_CRASH_the_emitter():
+    """The refusal above is the divergence case. These are the cases that
+    were not a divergence at all -- the emitter could not represent them.
+    An empty collection nested in a sequence fell through to the scalar
+    formatter and raised `unsupported scalar type for canonical YAML:
+    list`, so a legal document shape had no canonical form. They now hit
+    the same named refusal, which is the difference between "we decided
+    not to encode this" and "we did not notice"."""
+    for shape in ([[], [1]], [(1,)], [1, ["x"]], [{"a": 1}, ["b"]]):
+        with pytest.raises(TypeError, match="sequence directly inside a sequence"):
+            cy.canonical_dump({"k": shape})
+
+
+def test_the_refusal_is_narrow_and_the_legal_shapes_still_emit():
+    """A mapping inside a sequence, and a sequence inside a mapping, are
+    both fine and unaffected. Only sequence-directly-inside-sequence is
+    refused, so the refusal costs nothing any real artifact does."""
+    for document in (
+        {"k": ["a", "b"]},
+        {"k": [{"a": 1}, {"b": 2}]},
+        {"k": {"a": {"b": 1}}},
+        {"k": [{"a": [1, 2]}]},
+        {"k": [{}, {"a": 1}]},
+        {"k": {"a": {}, "b": []}},
+        {"k": [{"b": {"c": ["x"]}}]},
+    ):
+        assert yaml.safe_load(cy.canonical_dump(document)) == document
+
+
+def test_the_fixture_pins_the_collection_class_not_only_scalars():
+    """The scalar class is pinned by `implicit_typing_traps`. Until Phase
+    37 nothing pinned the shapes where the block renderer's dash-collapse
+    actually runs, which is where the divergence lived."""
+    shapes = cy.FIXTURE["collection_shapes"]
+    # The UNION of two independently-authored fixtures. Both halves of this
+    # reissue closed the collection class concurrently and reached the same
+    # refusal; their fixtures differed, and coverage is the entire purpose
+    # of this entry, so neither replaced the other.
+    assert set(shapes) >= {
+        # depth -- the deepest legal interleave the dash-collapse runs on
         "empty_seq_under_a_key_in_a_sequence",
         "map_in_seq_in_map_in_seq",
         "seq_under_a_key_in_a_map_in_a_seq",
+        # breadth -- empty collections in every position, and the
+        # documented alternative to a bare nested sequence
+        "empty_map_in_a_sequence",
+        "empty_map_value",
+        "empty_sequence_value",
+        "nested_empty_map",
+        "nested_empty_sequence",
+        "sequence_of_maps",
+        "sequence_of_scalars",
+        "wrapped_inner_sequence",
     }
     for value in shapes.values():
         assert yaml.safe_load(cy.canonical_dump({"v": value}))["v"] == value

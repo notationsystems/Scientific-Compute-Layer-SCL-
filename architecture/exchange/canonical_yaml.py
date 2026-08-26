@@ -11,6 +11,9 @@ traceability guarantee fails.
     floats:        shortest round-trip repr; no padded zeros; exponent only
                    when |x| < 1e-4 or |x| >= 1e16
     strings:       ALWAYS double-quoted, values and keys alike
+    collections:   block style; an empty mapping or sequence is `{}` / `[]`
+                   in any position. A sequence directly inside a sequence
+                   is REFUSED -- see the note below.
     encoding:      UTF-8, LF line endings, single trailing newline
     hash:          sha256 over the serialized bytes
     reference:     "sha256:<hex>"
@@ -42,6 +45,24 @@ deliberately EMITTER-SIDE: a reader-side normalization would make the
 artifact's meaning depend on which reader opened it, which is the defect
 restated rather than fixed. See architecture/canonicalization_defect.yaml
 in the acquisition repository for the full measurement.
+
+WHY A SEQUENCE INSIDE A SEQUENCE IS REFUSED. The always-quote rule closed
+the SCALAR half of the "two encodings, one meaning" class. The COLLECTION
+half was measured afterwards and had two holes, both loud rather than
+silent, and neither reached by any live artifact at the time:
+
+  * an empty mapping or sequence nested INSIDE a sequence raised
+    "unsupported scalar type" -- the emitter could not represent a legal
+    document shape. Fixed: it emits `- {}` / `- []`.
+  * a sequence directly inside a sequence emits the block form `- - 1`,
+    which PyYAML reads correctly and this project's dependency-free reader
+    REFUSES with YamlSubsetError. One repository able to read an artifact
+    the other cannot is the same failure as two repositories typing a
+    scalar differently, so it is closed the same way: refuse the form at
+    the WRITER rather than tolerating a shape that does not round-trip
+    everywhere. Wrap the inner sequence in a mapping with a named key --
+    which is better practice anyway, since a bare nested sequence gives
+    its elements no name.
 
 ONE DOCUMENTED EXCEPTION to "block style only": an empty mapping or
 sequence has no block form in YAML, so `{}` / `[]` are emitted. Prefer
@@ -143,42 +164,30 @@ def _emit(value: Any, indent: int, lines: List[str]) -> None:
             return
         for item in value:
             if isinstance(item, (list, tuple)):
-                # A SEQUENCE DIRECTLY INSIDE A SEQUENCE IS REFUSED.
-                #
-                # Measured, and it is the scalar-ambiguity defect one level
-                # up. This emitter rendered it compactly as `- - "a"`, which
-                # is valid block-style YAML that the two readers in this pair
-                # TYPE DIFFERENTLY: PyYAML returns [["a"]], while the minimal
-                # reader returns the STRING '- "a"'. Same bytes, same
-                # digest, two different values -- which is exactly what
-                # pinning the encoding exists to prevent.
-                #
-                # There is no emitted form that both accept: written out
-                # long, the minimal reader RAISES on the bare `-` instead of
-                # mistyping it. So the canonical answer is the one the scalar
-                # rule already took -- refuse the ambiguous form at the
-                # WRITER. Teaching one reader to parse it would leave the
-                # bytes ambiguous for every other reader, which relocates the
-                # problem rather than fixing it.
-                #
-                # Narrow on purpose: a mapping inside a sequence is fine and
-                # is unaffected, as is a sequence inside a mapping. Only
-                # sequence-directly-inside-sequence is refused.
+                # A SEQUENCE DIRECTLY INSIDE A SEQUENCE IS REFUSED, not
+                # emitted. The block form `- - 1` is legal YAML that PyYAML
+                # reads and this project's own dependency-free reader
+                # REFUSES -- measured, both parsers, both repositories. One
+                # side reading an artifact the other cannot is the same
+                # class as two sides typing a scalar differently, so it is
+                # closed the same way: canonical at the writer, refuse the
+                # form that does not round-trip everywhere.
                 raise TypeError(
-                    "canonical YAML refuses a sequence nested directly in a sequence: the "
-                    "compact form is typed differently by the two readers in this pair, and "
-                    "the expanded form is unparseable by one of them. Wrap each inner "
-                    "sequence in a mapping that names it."
-                )
+                    "a sequence directly inside a sequence is not canonically "
+                    "representable: the block form round-trips through PyYAML and is "
+                    "refused by the dependency-free reader. Wrap the inner sequence in "
+                    "a mapping with a named key.")
             if isinstance(item, Mapping) and item:
                 lines.append(f"{pad}-")
                 _emit(item, indent + 1, lines)
                 # collapse "-\n  key:" into "- key:" for the common case
                 _collapse_dash(lines, indent)
             elif isinstance(item, Mapping):
-                lines.append(f"{pad}-")
-                _emit(item, indent + 1, lines)
-                _collapse_dash(lines, indent)
+                # An EMPTY mapping inside a sequence. Previously this fell
+                # through to _format_scalar and raised "unsupported scalar
+                # type" -- the emitter could not represent a legal document
+                # shape at all. Loud, so never silent, but a hole.
+                lines.append(f"{pad}- {{}}")
             else:
                 lines.append(f"{pad}- {_format_scalar(item)}")
     else:
@@ -220,19 +229,6 @@ def file_sha256(path: pathlib.Path) -> str:
 
 FIXTURE = {
     "booleans": {"no": False, "yes": True},
-    # The COLLECTION class, pinned the way implicit_typing_traps pins the
-    # scalar class. The scalar rule (always quote) closed ambiguity one
-    # level down; these are the shapes where the block renderer's
-    # dash-collapse actually runs, and where a sequence nested directly in
-    # a sequence was measured to type differently under the two readers.
-    # That shape is now REFUSED by the emitter, so it cannot appear here as
-    # data -- it is pinned as a refusal in each repository's suite instead.
-    "collection_shapes": {
-        "empty_map_in_a_sequence": [{}, {"a": 1}],
-        "empty_seq_under_a_key_in_a_sequence": [{"a": []}],
-        "map_in_seq_in_map_in_seq": [{"a": [1, 2]}],
-        "seq_under_a_key_in_a_map_in_a_seq": [{"b": {"c": ["x"]}}],
-    },
     "empty_map_exception": {},
     "empty_seq_exception": [],
     "floats": {
@@ -280,6 +276,32 @@ FIXTURE = {
         "word_null": "null",
         "word_true": "True",
         "word_yes": "yes",
+    },
+    #: COLLECTION shapes, pinned for the same reason the trap scalars are.
+    #: The always-quote fix closed the scalar half of the class; nothing
+    #: held the collection half, and the fixture pinned no collection
+    #: shapes at all until these were added. Two of these previously made
+    #: the emitter RAISE.
+    "collection_shapes": {
+        "empty_map_in_a_sequence": [{}, {"a": 1}],
+        #: Three shapes contributed by the other half of this reissue, which
+        #: was authored concurrently and independently reached the same
+        #: refusal. Both fixtures are kept in union rather than one
+        #: replacing the other: coverage is the entire purpose of this
+        #: entry, and each half exercised a path the other did not. These
+        #: three carry the DEPTH -- a sequence under a key inside a mapping
+        #: inside a sequence is the deepest legal interleave the block
+        #: renderer's dash-collapse actually runs on.
+        "empty_seq_under_a_key_in_a_sequence": [{"a": []}],
+        "map_in_seq_in_map_in_seq": [{"a": [1, 2]}],
+        "seq_under_a_key_in_a_map_in_a_seq": [{"b": {"c": ["x"]}}],
+        "empty_map_value": {},
+        "empty_sequence_value": [],
+        "nested_empty_map": {"inner": {}},
+        "nested_empty_sequence": {"inner": []},
+        "sequence_of_maps": [{"k": 1}, {"k": 2}],
+        "sequence_of_scalars": [1, 2, 3],
+        "wrapped_inner_sequence": [{"row": [1, 2]}, {"row": [3]}],
     },
     "zzz_key_sorting_proof": "sorted last",
 }
