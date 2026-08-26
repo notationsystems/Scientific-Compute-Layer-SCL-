@@ -49,6 +49,22 @@ instances:
     repair: "compare with comments stripped (C++) or through an AST (Python); a diff that cannot reach execution is MALFORMED, counted neither as caught nor as surviving."
     severity: reported_a_test_gap_that_did_not_exist
 
+  - name: coverage_specified_by_enumeration
+    target: "is every artifact of this kind checked?"
+    subject: "are the artifacts in this written list checked?"
+    what_happened: "the two-parser typed-agreement check globbed architecture/exchange and architecture/proposals and NOT architecture/decisions -- so the one artifact type binding a joint decision to its input hashes was never checked, and an escape defect reached a hash-bearing artifact with every suite green."
+    repair: "assert the PROPERTY, not the enumeration: every directory carrying a .sha256 sidecar has its artifacts in the checked set. Adding the missing directory fixes one instance; asserting the rule fixes the class."
+    severity: reported_green_over_the_hole
+    arrived_at_independently_by: "the acquisition layer, which proposes it as core vocabulary in architecture/exchange/daq_capabilities.yaml"
+
+  - name: an_enforcement_claim_that_names_a_file_saying_nothing_about_it
+    target: "is this invariant enforced?"
+    subject: "does the ledger name a test file that exists?"
+    what_happened: "generation_depth_bounded named an enforcement file containing nothing about it and stayed green for 35 phases. Measuring it found 17 other invariants in the same state. Caught again in THIS phase: the new invariant added for the shadowed-test rule named its guard, and the guard did not mention the invariant."
+    repair: "tests/test_recursive_lineage_depth.py -- the named file must MENTION the invariant id, with the pre-existing set locked so it cannot grow. A deliberately weak bar: it is the bar the ledger's own claim of enforcement should already clear, and 18 entries did not."
+    severity: enforcement_claimed_and_absent
+    note: "the only instance in this list caught by an existing guard rather than by the phase that introduced it. That is the shape the rest of this file is trying to produce."
+
   - name: shadowed_test
     target: "do these tests pass?"
     subject: "does the module's namespace, after import, pass?"
@@ -79,6 +95,16 @@ convergence_is_not_evidence:
   demoted_to: "a PROMPT TO RE-MEASURE, not a form of evidence. Convergence raises the value of re-running the underlying measurement; it never substitutes for it."
   what_did_catch_it: "running the two readers against each other, on every shape, including the ones neither half had probed."
   the_practice_that_survives: "when two independent efforts agree, UNION their fixtures rather than choosing one -- neither set subsumed the other, and a shape nobody pins is a shape nobody agreed. That is a coverage argument, and it stands. The evidential claim does not."
+
+# ------------------------------------------- the sharpest sub-family --
+
+coverage_specified_by_enumeration:
+  proposed_by: "the acquisition layer, independently and in the same phase, as a core-vocabulary candidate on the same footing as absent-is-not-zero and one-meaning-one-encoding. Its formal statement lives in architecture/exchange/daq_capabilities.yaml under core_vocabulary_candidates, where it is hash-bound as a proposal to the other layer. It is NOT restated here -- one statement, one home; this entry records the relationship."
+  what_it_is: "the sub-family of this class in which the proxy is A LIST SOMEONE WROTE. A glob over enumerated directories, a grep for a specific string, a search over a named file set."
+  how_to_tell_you_are_in_it: "the check NAMES what it looks at instead of deriving it."
+  why_it_is_the_sharpest: "a check specified by enumeration is correct exactly until the world grows an item nobody added to the list, and it fails SILENTLY at that moment -- it reports success, because the thing it enumerates is still fine. No coverage at all leaves a visible hole; coverage-by-enumeration reports green over the hole, and the green is then cited as evidence."
+  its_repair_rule_is_adopted_for_the_whole_class: "ASSERT THE PROPERTY, NOT THE ENUMERATION. Sharper than the general diagnostic below and strictly stronger where it applies: adding the missing item fixes one instance, asserting the property fixes the class. The shadow guard follows it -- it refuses any module binding a test name twice, over every module found, rather than checking the files known to have had the problem."
+  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the eight instances below, each measured, not the fact that two authors named it."
 
 # ------------------------------------------------------- the pattern --
 

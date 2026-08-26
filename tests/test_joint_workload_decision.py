@@ -164,8 +164,24 @@ def test_the_record_binds_reissue_not_edit(record):
 # --------------------------------------------------------------------------
 
 
-def _fixture_hash_history():
-    """Distinct values of the record's fixture hash, newest committed first.
+#: Every field in the record whose value is a bound artifact digest, DERIVED
+#: from the record rather than listed here. Generalized in the same phase
+#: that proposed coverage-by-enumeration as a core-vocabulary candidate:
+#: this block originally named `canonicalization_fixture_hash` and only that,
+#: which is a coverage predicate specified by enumeration. The capabilities
+#: artifact was equally bound and equally unchecked, and its chain link would
+#: have gone unenforced for exactly the same reason the escape defect reached
+#: a hash-bearing artifact -- the check looked where someone had written down.
+def _bound_artifact_fields(record):
+    return sorted(
+        key for key, value in record.items()
+        if key.endswith("_hash") and isinstance(value, str) and value.startswith("sha256:")
+    )
+
+
+def _hash_history(field):
+    """Distinct values of one bound-artifact hash field, newest committed
+    first.
 
     Returns None when history is unavailable (a shallow clone), so the
     weaker half of the check still runs rather than the whole thing being
@@ -188,41 +204,67 @@ def _fixture_hash_history():
         )
         if blob.returncode != 0:
             continue
-        value = yaml.safe_load(blob.stdout).get("canonicalization_fixture_hash")
+        value = yaml.safe_load(blob.stdout).get(field)
         if value and (not seen or seen[-1] != value):
             seen.append(value)
     return seen or None
 
 
-def test_the_reissue_chain_does_not_point_at_itself(record):
+def test_every_bound_artifact_hash_is_a_field_this_block_actually_checks(record):
+    """THE PROPERTY, not the list. If the record grows a new bound
+    artifact, this fails until the chain covers it -- rather than the new
+    binding being silently unchecked, which is how the previous version of
+    this block would have treated the capabilities hash."""
+    bound = _bound_artifact_fields(record)
+    assert len(bound) >= 3, f"expected at least three bound artifacts, found {bound}"
+    unchained = [
+        field for field in bound
+        if f"previous_{field}" not in record["reissue"]
+    ]
+    assert unchained == [], (
+        f"these artifact hashes are BOUND by the record but their reissue chain is "
+        f"unrecorded, so nothing can tell what they replaced: {unchained}"
+    )
+
+
+@pytest.mark.parametrize("field", ["canonicalization_fixture_hash", "capabilities_artifact_hash",
+                                   "requirements_artifact_hash"])
+def test_the_reissue_chain_does_not_point_at_itself(record, field):
     """The defect that motivated this block, stated as its own case.
 
     A record whose predecessor is itself has no predecessor: the chain
     terminates at the link that was supposed to extend it."""
-    assert (record["reissue"]["previous_canonicalization_fixture_hash"]
-            != record["canonicalization_fixture_hash"]), (
-        "previous_canonicalization_fixture_hash names the CURRENT fixture -- "
-        "the chain link points at itself and records no predecessor"
+    previous = record["reissue"].get(f"previous_{field}")
+    if previous is None or not previous.startswith("sha256:"):
+        pytest.skip(f"{field} records no predecessor digest ({previous!r})")
+    assert previous != record[field], (
+        f"previous_{field} names the CURRENT value -- the chain link points at itself "
+        "and records no predecessor"
     )
 
 
-def test_the_named_predecessor_is_the_one_git_actually_replaced(record):
+@pytest.mark.parametrize("field", ["canonicalization_fixture_hash", "capabilities_artifact_hash",
+                                   "requirements_artifact_hash"])
+def test_the_named_predecessor_is_the_one_git_actually_replaced(record, field):
     """The strong form: not merely that the link differs from the current
     hash, but that it is the value this reissue REPLACED.
 
     Checked against committed history rather than against the record's own
     say-so -- a record is not an oracle for its own provenance."""
-    history = _fixture_hash_history()
+    previous = record["reissue"].get(f"previous_{field}")
+    if previous is None or not previous.startswith("sha256:"):
+        pytest.skip(f"{field} records no predecessor digest ({previous!r})")
+    history = _hash_history(field)
     if history is None:
         pytest.skip("no git history for the record (shallow clone)")
 
-    current = record["canonicalization_fixture_hash"]
+    current = record[field]
     # Working-tree value first; git dedups to the same sequence once landed.
     chain = history if history[0] == current else [current] + history
     if len(chain) < 2:
-        pytest.skip("the record has only ever had one fixture hash")
+        pytest.skip(f"the record has only ever had one {field}")
 
-    assert record["reissue"]["previous_canonicalization_fixture_hash"] == chain[1], (
-        f"the record names {record['reissue']['previous_canonicalization_fixture_hash']} "
-        f"as its predecessor, but the value it replaced was {chain[1]}"
+    assert previous == chain[1], (
+        f"the record names {previous} as the predecessor of {field}, "
+        f"but the value it replaced was {chain[1]}"
     )
