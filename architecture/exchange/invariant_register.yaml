@@ -43,7 +43,7 @@
 "extends": "core@1.0.0"
 "extends_join":
   "artifacts_declaring_a_different_core": []
-  "artifacts_declaring_the_core": 35
+  "artifacts_declaring_the_core": 36
   "counted_by": "parsing every YAML document, never by text search"
   "why_that_matters_here": "core.yaml recorded 26. Parsed, it is 32. A search for `extends: core@1.0.0` cannot see `\"extends\": \"core@1.0.0\"`, which is exactly what the shared canonical emitter writes -- so the artifacts invisible to the count were the canonically-emitted ones, the most carefully produced files in the pair."
 "joined_on":
