@@ -106,7 +106,26 @@
 //     lets nothing escape. The CLI's top-level catch is a backstop for
 //     defects, not the operation's error path.
 //
-// 10. STE DESCRIPTOR. Reachable as `descriptor_header(<name>)`
+// 10. PROBE THE RULE, NOT THE TESTS. Before an operation is considered
+//     done, each clause above is checked AGAINST THE RUNNING GATE,
+//     independently of whether the suite passes. Ask what the clause
+//     claims and construct the input that would violate it; a suite that
+//     passes completely is not evidence that a clause holds, only that
+//     nothing already written violates it.
+//
+//     This is a required step because it has now found two defects that
+//     full suites could not:
+//       * fourier_transform_1d accepted arbitrary bytes in an ignored
+//         configuration field, giving "no spacing" 2^64 encodings, in an
+//         operation that had passed its contract suite, its analytic
+//         validation and its identity tests;
+//       * the acquisition layer's table gate type-checked its identity
+//         fields and not its value cell, while its own rationale
+//         explained why that exclusion mattered.
+//     Both were found by asking whether the STATED RULE held, and neither
+//     could have been found by running more of what was already there.
+//
+// 11. STE DESCRIPTOR. Reachable as `descriptor_header(<name>)`
 //     (python/scl/ste_adapter.py) so the operation gets its own program
 //     identity and can never inherit another operation's.
 

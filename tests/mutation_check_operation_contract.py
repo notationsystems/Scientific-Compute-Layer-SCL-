@@ -13,9 +13,10 @@ Not a pytest module. It edits tracked source and rebuilds, so it is run
 deliberately (`python3 tests/mutation_check_operation_contract.py`) and
 always restores the tree, including after a failure or Ctrl-C.
 
-Clauses 2 and 3 are NOT listed. They have no dedicated test in the
-conformance suite -- see the CLAUSES_WITHOUT_A_DEDICATED_TEST note at the
-bottom, which this script reports rather than hides.
+Clauses 2 and 3 now HAVE dedicated tests -- they did not when this script
+was written, and it reported that gap rather than hiding it. Writing them
+found a live defect (see the clause-2 entry below), which is why the gap
+was worth reporting instead of tolerating.
 """
 
 from __future__ import annotations
@@ -38,6 +39,20 @@ MUTATIONS = [
         '{"fourier_transform_1d", &run_fourier_transform_1d},',
         '{"fft", &run_fourier_transform_1d},',
         "test_clause1_operation_names_are_snake_case_and_not_algorithm_names",
+    ),
+    (
+        2, "a conditionally-unused field accepted and ignored rather than refused",
+        "native/src/op_fourier.cpp",
+        "    if (!params.has_sample_spacing && params.sample_spacing_seconds != 0.0) {",
+        "    if (false) {",
+        "test_clause2_an_ignored_configuration_field_is_refused_not_tolerated",
+    ),
+    (
+        3, "an empty input accepted as a silently-empty success",
+        "native/src/fourier.cpp",
+        "    if (signal.empty()) {",
+        "    if (false) {  // MUTANT: empty input becomes an empty success",
+        "test_clause3_empty_input_is_a_validation_fault_not_an_empty_success",
     ),
     (
         4, "a validation fault that names nothing the caller can act on",
@@ -75,24 +90,19 @@ MUTATIONS = [
         "test_clause9_totality_holds_for_each_registered_operation",
     ),
     (
-        10, "two operations sharing one program identity",
+        11, "two operations sharing one program identity",
         "python/scl/ste_adapter.py",
         'return b"ste.scl." + operation.replace("_", "-").encode("utf-8") + b".v1"',
         'return b"ste.scl.shared.v1"',
-        "test_clause10_every_operation_has_its_own_program_identity",
+        "test_clause11_every_operation_has_its_own_program_identity",
     ),
 ]
 
-CLAUSES_WITHOUT_A_DEDICATED_TEST = {
-    2: ("CONFIGURATION DECODER (reserved fields must be zero). Exercised "
-        "only indirectly, through clause 8's malformed-configuration cases: "
-        "those assert the FAULT VOCABULARY is respected, not that a "
-        "non-zero reserved field is refused at all."),
-    3: ("INPUT DECODER (empty input is a VALIDATION fault, never a "
-        "silently-empty success). Exercised only indirectly, through "
-        "clause 6, which asserts a halted outcome carries no output -- not "
-        "that an empty input halts in the first place."),
-}
+#: Empty, and kept as a named slot rather than deleted: the moment a new
+#: clause is added to the contract without a test, it belongs here where
+#: the script REPORTS it. Clauses 2 and 3 lived here until writing their
+#: tests found the canonical-encoding defect.
+CLAUSES_WITHOUT_A_DEDICATED_TEST = {}
 
 
 def _restore(source: pathlib.Path, target: pathlib.Path) -> None:
@@ -181,9 +191,12 @@ def main() -> int:
         if verdict != "CAUGHT":
             print(f"  clause {clause}: {verdict} -- {description}")
 
-    print("\nCLAUSES WITH NO DEDICATED TEST (reported, not hidden):")
-    for clause, why in sorted(CLAUSES_WITHOUT_A_DEDICATED_TEST.items()):
-        print(f"  clause {clause}: {why}")
+    if CLAUSES_WITHOUT_A_DEDICATED_TEST:
+        print("\nCLAUSES WITH NO DEDICATED TEST (reported, not hidden):")
+        for clause, why in sorted(CLAUSES_WITHOUT_A_DEDICATED_TEST.items()):
+            print(f"  clause {clause}: {why}")
+    else:
+        print("\nevery clause has a dedicated test")
 
     print("\nrestored tree still green:", not suite_failures())
     return 0 if len(caught) == len(MUTATIONS) else 1

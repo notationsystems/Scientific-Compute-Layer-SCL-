@@ -327,7 +327,7 @@ def test_clause1_operation_names_are_snake_case_and_not_algorithm_names(cli_path
         assert operation != "fft", "name the mathematical operation, not the algorithm"
 
 
-def test_clause10_every_operation_has_its_own_program_identity(cli_path):
+def test_clause11_every_operation_has_its_own_program_identity(cli_path):
     ste_adapter = pytest.importorskip(
         "scl.ste_adapter", reason="STE checkout absent; environment gap, not a contract failure")
     from execution.specification import ExecutionSpecification

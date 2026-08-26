@@ -278,6 +278,15 @@ rather than a discovery.
 
 ### 6.2 One meaning, one encoding
 
+> **A reader that normalizes is not a fix. It relocates the ambiguity to
+> whoever opens the artifact.**
+
+That is the repair, stated first because it is the sentence that stops the
+next instance being fixed the wrong way. Every occurrence of this class so
+far has had an available reader-side "fix" that looked cheaper and would
+have moved the defect rather than closing it. The encoding is made
+canonical **at the writer**, and the ambiguous form is refused.
+
 Section 6.1 asks which parameters *participate*. This asks a prior
 question: whether a parameter has one encoding at all.
 
@@ -310,10 +319,19 @@ different digests" has now appeared at three layers:
 | operation configuration | ignored payload behind a clear flag | two byte strings on `parameters_identity` |
 | evidence content | absent vs sentinel vs omitted | absence with several spellings |
 
-All three are closed by the same move, and it is worth stating as the
-general repair: **make the encoding canonical at the WRITER, and refuse
-the ambiguous form rather than tolerating it.** A reader that normalizes
-is not a fix — it relocates the ambiguity to whoever opens the artifact.
+All three are closed by the move stated at the top of this section.
+
+**Two independent arrivals, in one phase, by sessions that were not
+coordinating.** The compute layer generalized this rule over
+presence-flag-guarded payloads at the same time the acquisition layer
+added `VALUE_AND_ABSENCE_BOTH_PRESENT` to its observation-table gate —
+refusing a value and an absence-reason asserted together. Neither knew of
+the other's work. That is evidence about the class rather than a
+coincidence about the phase: a rule two subsystems derive independently
+from their own pressures is a property of the substrate, not of either
+contract. Recorded as a candidate for **core** rather than for SCL's
+contract or DAQ's, alongside the absent-is-not-zero candidate it closely
+resembles.
 
 **Where it reaches next.** Any optional field, any union behind a kind
 discriminant, any reserved word — and, one layer up, any representation of
