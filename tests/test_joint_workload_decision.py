@@ -148,3 +148,81 @@ def test_the_preconditions_record_that_the_reissue_came_first(record):
 
 def test_the_record_binds_reissue_not_edit(record):
     assert "REISSUED rather than edited" in record["binding_rule"]
+
+
+# --------------------------------------------------------------------------
+# THE REISSUE CHAIN. Added after the second reissue shipped a link that
+# pointed AT ITSELF: `previous_canonicalization_fixture_hash` named the new
+# fixture rather than the one it replaced. Both repositories' suites were
+# fully green, because nothing anywhere asserted on the chain -- the record
+# CLAIMED to name its predecessor and no test ever read the claim.
+#
+# Same shape as the two defects clause 10 was written for, and it is worth
+# naming as a third: a property stated in an artifact is not a property
+# enforced by one. The record binds the artifacts it names; until now
+# nothing bound the record to the record it replaced.
+# --------------------------------------------------------------------------
+
+
+def _fixture_hash_history():
+    """Distinct values of the record's fixture hash, newest committed first.
+
+    Returns None when history is unavailable (a shallow clone), so the
+    weaker half of the check still runs rather than the whole thing being
+    silently skipped."""
+    import subprocess
+
+    relative = RECORD.relative_to(REPO_ROOT).as_posix()
+    log = subprocess.run(
+        ["git", "log", "--format=%H", "--", relative],
+        cwd=str(REPO_ROOT), capture_output=True, text=True,
+    )
+    if log.returncode != 0 or not log.stdout.strip():
+        return None
+
+    seen = []
+    for commit in log.stdout.split():
+        blob = subprocess.run(
+            ["git", "show", f"{commit}:{relative}"],
+            cwd=str(REPO_ROOT), capture_output=True, text=True,
+        )
+        if blob.returncode != 0:
+            continue
+        value = yaml.safe_load(blob.stdout).get("canonicalization_fixture_hash")
+        if value and (not seen or seen[-1] != value):
+            seen.append(value)
+    return seen or None
+
+
+def test_the_reissue_chain_does_not_point_at_itself(record):
+    """The defect that motivated this block, stated as its own case.
+
+    A record whose predecessor is itself has no predecessor: the chain
+    terminates at the link that was supposed to extend it."""
+    assert (record["reissue"]["previous_canonicalization_fixture_hash"]
+            != record["canonicalization_fixture_hash"]), (
+        "previous_canonicalization_fixture_hash names the CURRENT fixture -- "
+        "the chain link points at itself and records no predecessor"
+    )
+
+
+def test_the_named_predecessor_is_the_one_git_actually_replaced(record):
+    """The strong form: not merely that the link differs from the current
+    hash, but that it is the value this reissue REPLACED.
+
+    Checked against committed history rather than against the record's own
+    say-so -- a record is not an oracle for its own provenance."""
+    history = _fixture_hash_history()
+    if history is None:
+        pytest.skip("no git history for the record (shallow clone)")
+
+    current = record["canonicalization_fixture_hash"]
+    # Working-tree value first; git dedups to the same sequence once landed.
+    chain = history if history[0] == current else [current] + history
+    if len(chain) < 2:
+        pytest.skip("the record has only ever had one fixture hash")
+
+    assert record["reissue"]["previous_canonicalization_fixture_hash"] == chain[1], (
+        f"the record names {record['reissue']['previous_canonicalization_fixture_hash']} "
+        f"as its predecessor, but the value it replaced was {chain[1]}"
+    )

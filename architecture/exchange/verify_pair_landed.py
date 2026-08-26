@@ -29,12 +29,24 @@ import sys
 #: byte-identical by agreement, and that agreement is what makes any
 #: artifact digest mean anything.
 SHARED = (
+    "architecture/decisions/2026-08-26-joint-workload-decision.sha256",
+    "architecture/decisions/2026-08-26-joint-workload-decision.yaml",
     "architecture/exchange/canonical_yaml.py",
+    "architecture/exchange/canonical_yaml.sha256",
     "architecture/exchange/canonicalization_fixture.yaml",
     "architecture/exchange/canonicalization_fixture.sha256",
     "architecture/exchange/scl_requirements.yaml",
     "architecture/exchange/scl_requirements.sha256",
 )
+#: Three entries were added in the second coordinated reissue, and each was
+#: missing for the same reason: this list was written from the files the
+#: FIRST reissue happened to touch, not from the files the pair actually
+#: shares. The serializer's own source pin is shared by construction. The
+#: joint decision record is byte-identical by agreement and binds the
+#: fixture hash -- so a fixture change reissues it, and a check that did
+#: not look at it would have called the pair landed while the two records
+#: disagreed. Measured: they HAD diverged once already, when one clone was
+#: three commits stale and held the pre-correction record.
 
 
 def _git(repo, *args):

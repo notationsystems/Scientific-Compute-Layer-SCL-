@@ -6,11 +6,21 @@
     - {}
     - "a": 1
   "empty_map_value": {}
+  "empty_seq_under_a_key_in_a_sequence":
+    - "a": []
   "empty_sequence_value": []
+  "map_in_seq_in_map_in_seq":
+    - "a":
+        - 1
+        - 2
   "nested_empty_map":
     "inner": {}
   "nested_empty_sequence":
     "inner": []
+  "seq_under_a_key_in_a_map_in_a_seq":
+    - "b":
+        "c":
+          - "x"
   "sequence_of_maps":
     - "k": 1
     - "k": 2
