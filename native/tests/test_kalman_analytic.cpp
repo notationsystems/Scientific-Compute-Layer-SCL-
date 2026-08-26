@@ -124,6 +124,49 @@ void test_a_worthless_measurement_is_ignored() {
     CHECK(close(res.states.back(), 0.0, 1e-3));   // never moved toward 1000
 }
 
+// --- A NON-SYMMETRIC TRANSITION, WHICH NOTHING ELSE HERE EXERCISES ------
+//
+// FOUND BY MUTATION, NOT BY DESIGN. Replacing F P F^T with F P F in the
+// predict step SURVIVED the whole suite: every analytic anchor above is
+// scalar, where F is 1x1 and F = F^T trivially, and the covariance-update
+// property tests build their own predicted P rather than going through the
+// filter's. So the filter's own predict step had never been run with a
+// transition that distinguishes the two.
+//
+// Checked against arithmetic done by hand, not against the filter:
+//
+//     F = [[1, 1],   P0 = [[1, 0],   Q = 0
+//          [0, 1]]         [0, 2]]
+//
+//     F P0 F^T = [[3, 2],     F P0 F = [[1, 3],
+//                 [2, 2]]               [0, 2]]
+//
+// With H = [1, 0] the first innovation covariance is S = P-(0,0) + R,
+// which is 3 + R under the correct form and 1 + R under the transposed
+// one. S is reported, so the discrimination needs no internal access.
+void test_a_non_symmetric_transition_is_propagated_with_the_transpose() {
+    const double r = 0.5;
+    scl::KalmanProblem p;
+    p.state_dimension = 2;
+    p.measurement_dimension = 1;
+    p.transition = {1.0, 1.0,
+                    0.0, 1.0};          // deliberately NOT symmetric
+    p.observation = {1.0, 0.0};
+    p.process_noise.dimension = 2;
+    p.process_noise.matrix = {0.0, 0.0, 0.0, 0.0};
+    p.measurement_noise.dimension = 1;
+    p.measurement_noise.matrix = {r};
+    p.initial_state = {0.0, 0.0};
+    p.initial_covariance = {1.0, 0.0,
+                            0.0, 2.0};
+    p.steps = 1;
+    p.measurements = {0.0};
+
+    const scl::KalmanResult res = scl::run_kalman_filter(p, scl::KalmanParameters{});
+    CHECK(close(res.innovation_covariances[0], 3.0 + r, 1e-12));
+    CHECK(!close(res.innovation_covariances[0], 1.0 + r, 1e-3));   // the transposed form
+}
+
 // --- THE CONTRACT FAULTS, each refused by name ---------------------------
 void test_the_contract_faults() {
     scl::KalmanParameters params;
@@ -342,6 +385,7 @@ int main() {
     test_the_covariance_update_holds_for_any_gain();
     test_the_contract_survives_two_thousand_perturbed_steps();
     test_the_contract_also_holds_at_the_optimal_gain_over_many_steps();
+    test_a_non_symmetric_transition_is_propagated_with_the_transpose();
     test_the_contract_faults();
     std::printf("kalman analytic: %d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

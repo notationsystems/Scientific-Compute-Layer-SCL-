@@ -146,6 +146,20 @@ convergence_is_not_evidence:
   what_did_catch_it: "running the two readers against each other, on every shape, including the ones neither half had probed."
   the_practice_that_survives: "when two independent efforts agree, UNION their fixtures rather than choosing one -- neither set subsumed the other, and a shape nobody pins is a shape nobody agreed. That is a coverage argument, and it stands. The evidential claim does not."
 
+# --------------------------------------- two construction rules, earned --
+
+do_not_change_the_product_so_a_test_can_reach_a_regime:
+  rule: "when a property is only visible in a regime the code cannot currently produce, expose the FUNCTION and call it with that input. Do not add a parameter, flag or hook to the shipped path so a test can steer it there."
+  the_case_that_earned_it: "the covariance update's guarantee holds for ANY gain, and the operation only ever supplies the optimal one -- under which every update form agrees. Reaching the discriminating regime needed a suboptimal gain. Adding a gain-perturbation parameter to the operation would have made the test easy and would have added a way to produce a wrong filter, permanently, so that a test could run for an hour."
+  why_it_is_the_counterpart_to_a_rule_already_here: "the same shape as fixing the test rather than loosening the tolerance. Both are the temptation to move the thing being measured instead of the thing measuring it -- one moves the threshold, this one moves the product."
+  the_boundary: "exposing an internal function IS a change to the surface, and the distinction is what the surface now permits. A named function with a stated contract permits exactly what the contract says. A perturbation knob permits a caller to produce an invalid result on purpose."
+
+a_mutation_set_is_a_lower_bound_not_a_proof:
+  rule: "report mutation coverage as a LOWER BOUND. A mutation set is an enumeration -- the shape this file names -- and unlike the other instances it cannot be replaced by a derived property, because there is no derivable set of 'all wrong implementations'."
+  why_it_is_stated_rather_than_engineered_away: "the honest response to an enumeration that cannot be derived is to say so where the result is read, not to present it as coverage. tests/mutation_check_kalman.py prints the caveat with the score."
+  what_it_still_earns: "three real defects in one run that the full suite had reported green: a surviving Joseph mutant whose justification then turned out to be false, a surviving F P F^T transposition that no scalar anchor could see, and an attribution the harness disproved -- the innovation-sign mutant is caught, but not by the test that claimed it, because that case drives all-zero measurements from a zero state and cannot distinguish the sign."
+  the_harness_also_caught_its_own_operator_again: "one entry in the mutation set was a DEFECTIVE MUTATION: it declared an unused variable, which is a real statement, so the textual malformed-check passed it -- and dead code, so it changed nothing and reported SURVIVED. The malformed check catches comment-only diffs, not dead-code ones. The entry is corrected and kept, and the limit is recorded rather than left as a surprise for the next reader."
+
 # ------------------------------------------- the sharpest sub-family --
 
 coverage_specified_by_enumeration:
