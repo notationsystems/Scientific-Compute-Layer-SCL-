@@ -1,0 +1,109 @@
+"artifact": "scl_contract_clauses"
+"clause_10_is_the_named_exception": "clause 10 is PROBE THE RULE, NOT THE TESTS. It is a procedure the other clauses are checked by, not a property of a registry entry, so a dedicated test asserting it would be a test asserting that testing happened. It is reported here as having no dedicated test rather than being quietly excluded from the count, because a clause nobody checks and a clause that cannot be checked look identical in a list that hides one of them."
+"clause_count": 11
+"clauses":
+  "clause_01":
+    "coverage": "tested_and_mutation_checked"
+    "dedicated_tests":
+      - "test_clause1_operation_names_are_snake_case_and_not_algorithm_names"
+    "mutations_written_against_it":
+      - "name the algorithm rather than the mathematical operation"
+    "number": 1
+    "title": "NAME"
+  "clause_02":
+    "coverage": "tested_and_mutation_checked"
+    "dedicated_tests":
+      - "test_clause2_a_non_zero_reserved_field_is_refused"
+      - "test_clause2_an_ignored_configuration_field_is_refused_not_tolerated"
+      - "test_clause2_each_operation_rejects_every_wrong_configuration_length"
+      - "test_clause2_every_reserved_field_is_declared"
+    "mutations_written_against_it":
+      - "a conditionally-unused field accepted and ignored rather than refused"
+    "number": 2
+    "title": "CONFIGURATION DECODER"
+  "clause_03":
+    "coverage": "tested_and_mutation_checked"
+    "dedicated_tests":
+      - "test_clause3_a_partial_element_is_refused"
+      - "test_clause3_empty_input_is_a_validation_fault_not_an_empty_success"
+    "mutations_written_against_it":
+      - "an empty input accepted as a silently-empty success"
+    "number": 3
+    "title": "INPUT DECODER"
+  "clause_04":
+    "coverage": "tested_and_mutation_checked"
+    "dedicated_tests":
+      - "test_clause4_validation_faults_are_actionable"
+    "mutations_written_against_it":
+      - "a validation fault that names nothing the caller can act on"
+    "number": 4
+    "title": "VALIDATION"
+  "clause_05":
+    "coverage": "tested_and_mutation_checked"
+    "dedicated_tests":
+      - "test_clause5_backend_unavailability_is_identical_across_operations"
+    "mutations_written_against_it":
+      - "a per-operation backend-availability message instead of one source of truth"
+    "number": 5
+    "title": "BACKEND DISPATCH"
+  "clause_06":
+    "coverage": "tested_and_mutation_checked"
+    "dedicated_tests":
+      - "test_clause6_halted_operations_carry_no_output_or_identities"
+      - "test_clause6_the_wire_response_omits_output_entirely_when_halted"
+    "mutations_written_against_it":
+      - "a halted outcome carrying an empty-but-present output"
+    "number": 6
+    "title": "OUTPUT ENCODER"
+  "clause_07":
+    "coverage": "tested_and_mutation_checked"
+    "dedicated_tests":
+      - "test_clause7_every_operation_emits_the_required_metric"
+      - "test_clause7_no_operation_emits_another_operations_metrics"
+    "mutations_written_against_it":
+      - "an operation emits ANOTHER operation's metric key"
+    "number": 7
+    "title": "METRICS"
+  "clause_08":
+    "coverage": "tested_and_mutation_checked"
+    "dedicated_tests":
+      - "test_clause8_malformed_requests_only_use_the_shared_vocabulary"
+    "mutations_written_against_it":
+      - "minting a fault code outside the shared vocabulary"
+    "number": 8
+    "title": "FAULTS"
+  "clause_09":
+    "coverage": "tested_and_mutation_checked"
+    "dedicated_tests":
+      - "test_clause9_the_cli_always_answers_and_never_crashes"
+      - "test_clause9_totality_holds_for_each_registered_operation"
+    "mutations_written_against_it":
+      - "an operation that escapes instead of answering"
+    "number": 9
+    "title": "TOTALITY"
+  "clause_10":
+    "coverage": "no_dedicated_test"
+    "dedicated_tests": []
+    "mutations_written_against_it": []
+    "number": 10
+    "title": "PROBE THE RULE, NOT THE TESTS"
+  "clause_11":
+    "coverage": "tested_and_mutation_checked"
+    "dedicated_tests":
+      - "test_clause11_every_operation_has_its_own_program_identity"
+    "mutations_written_against_it":
+      - "two operations sharing one program identity"
+    "number": 11
+    "title": "STE DESCRIPTOR"
+"clauses_with_no_dedicated_test":
+  - "clause_10"
+"extends": "core@1.0.0"
+"owner": "scl"
+"purpose": "SCL's invariant source, in the form the three-party register can join on. Emitted here because the register is derived in the acquisition repository, which cannot read this one."
+"source_of_truth":
+  "clauses": "native/include/scl/operation.hpp"
+  "conformance": "tests/test_operation_registry_contract.py"
+  "derived_not_retyped": "clause numbers and titles are parsed from the header, test names are read from the conformance suite's definitions, and mutation coverage is read from the checker's own table. Nothing here is typed twice."
+  "mutation_check": "tests/mutation_check_operation_contract.py"
+"what_the_conformance_suite_enumerates": "the registry FROM THE BINARY rather than a hardcoded list, so an operation added tomorrow is held to every clause the moment it is registered. That is why SCL reports clause coverage rather than per-operation coverage: the per-operation axis is closed by construction."
+"why_there_is_no_status_field": "the acquisition repository's invariants carry a status -- enforced, vacuously_enforced, represented_unenforced, absent. SCL's clauses do not have one, and inventing a mapping would make the register join on a word that means something different on each side. What SCL can say instead is factual: which tests claim a clause, and whether a mutation has ever been written to break it."

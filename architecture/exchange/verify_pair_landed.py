@@ -25,10 +25,10 @@ import pathlib
 import subprocess
 import sys
 
-#: Files that MUST be byte-identical across the pair. The serializer is
-#: byte-identical by agreement, and that agreement is what makes any
-#: artifact digest mean anything.
-SHARED = (
+#: The prior enumeration, retained as the dated thing it was rather than
+#: deleted. Twelve files, and the list grew twice by someone noticing a
+#: file it did not name.
+SHARED_AS_ENUMERATED_UNTIL_2026_08_26 = (
     "architecture/decisions/2026-08-26-joint-workload-decision.sha256",
     "architecture/decisions/2026-08-26-joint-workload-decision.yaml",
     "architecture/kalman_validation_preregistration.yaml",
@@ -42,15 +42,50 @@ SHARED = (
     "architecture/exchange/scl_requirements.yaml",
     "architecture/exchange/scl_requirements.sha256",
 )
-#: Three entries were added in the second coordinated reissue, and each was
-#: missing for the same reason: this list was written from the files the
-#: FIRST reissue happened to touch, not from the files the pair actually
-#: shares. The serializer's own source pin is shared by construction. The
-#: joint decision record is byte-identical by agreement and binds the
-#: fixture hash -- so a fixture change reissues it, and a check that did
-#: not look at it would have called the pair landed while the two records
-#: disagreed. Measured: they HAD diverged once already, when one clone was
-#: three commits stale and held the pre-correction record.
+
+
+#: The subtree the pair shares. Named once, here, so a check on either
+#: side can ask what the shared surface IS rather than assuming it.
+SHARED_SURFACE = "architecture"
+
+
+def shared_files(repos):
+    """Every path under architecture/ that BOTH repositories hold.
+
+    DERIVED, not listed, since 2026-08-26. The enumeration above carried
+    its own confession -- "this list was written from the files the FIRST
+    reissue happened to touch, not from the files the pair actually
+    shares" -- and grew twice by someone noticing an omission. Measured
+    when the derivation replaced it, the intersection was 15 files and the
+    list named 12. The three it missed:
+
+        architecture/exchange/scl_contract_clauses.yaml   new that day
+        architecture/exchange/scl_contract_clauses.sha256 new that day
+        architecture/exchange/verify_pair_landed.py       THIS FILE
+
+    The pair checker was not in its own shared set. Two copies could
+    diverge -- a rule tightened on one side, a file added to the list on
+    one side -- and each would go on reporting PAIR LANDED using its own
+    idea of what the pair shares. A checker outside the thing it checks is
+    the oldest hole there is, and it was open here for the whole life of
+    the file.
+
+    THE PROPERTY: a file is shared because BOTH REPOSITORIES HOLD IT, not
+    because it appears on a list. Anything either side adds to the shared
+    surface is covered by existing, on the day it exists. What this cannot
+    see is a file one side holds and the other has not yet received --
+    correctly so: that is an unfinished mirror, and it shows up as an
+    absent file the moment the other side adds it.
+    """
+    held = []
+    for repo in repos:
+        paths = set()
+        for path in (repo / SHARED_SURFACE).rglob("*"):
+            if path.is_file() and "__pycache__" not in path.parts:
+                paths.add(str(path.relative_to(repo)))
+        held.append(paths)
+    common = set.intersection(*held) if held else set()
+    return sorted(common)
 
 
 def _git(repo, *args):
@@ -80,8 +115,12 @@ def main(argv):
         print(f"  {repo.name:34} {branch}\n      local={local[:12]} remote={remote[:12] or '-'}  {state}")
         ok &= synced
 
-    print("\n=== shared files byte-identical across the pair ===")
-    for relative in SHARED:
+    shared = shared_files(repos)
+    missed = sorted(set(shared) - set(SHARED_AS_ENUMERATED_UNTIL_2026_08_26))
+    print(f"\n=== shared files byte-identical across the pair ({len(shared)} derived) ===")
+    if missed:
+        print(f"      derived beyond the old enumeration: {', '.join(missed)}")
+    for relative in shared:
         digests = []
         for repo in repos:
             path = repo / relative

@@ -86,6 +86,18 @@ instances:
     the_distinction_the_check_had_to_preserve: "a superseded status is not automatically a defect -- this pair deliberately retains dated measurements. So a superseded status RETAINED WITH THE CURRENT ONE STATED BESIDE IT passes, and a superseded status STANDING ALONE fails. Both are expressible and only one is a defect."
     severity: two_corrections_behind_with_every_suite_green
 
+  - name: a_pin_that_ratified_the_state_it_should_have_caught
+    target: "does the record still describe the repository?"
+    subject: "does the record still say what it said last time?"
+    what_happened: "the generality probe's recursive_computation FAIL went stale when the invariant it measured was implemented, and `test_the_probe_records_the_failure_rather_than_a_pass` asserted `PROBE['outcome']['failed'] == ['recursive_computation']`. The repair turned nothing red. The pin and the staleness AGREED WITH EACH OTHER."
+    why_it_is_not_the_same_as_a_check_failing_to_fire: "no check failed. Both mechanisms behaved exactly as written, and the suite reporting green was CORRECT behaviour from both -- the record said X and the test asserted the record said X. Two mechanisms mutually confirming a false state produce a stronger green than one mechanism producing none, because the agreement reads as corroboration."
+    what_the_pin_was_actually_asserting: "not that the property held. That the RECORD had not changed. A test written over a measurement freezes whichever direction the measurement was pointing when it was written -- so it defends a true result and a stale one with identical force, and cannot tell you which it is defending."
+    the_diagnostic: "for any test that asserts on a recorded measurement, ask what happens when the WORLD changes and the record does not. If the answer is that the test still passes, the test is pinning the record, not the property. A pin is correct only where the record is the thing under test -- a chain link, a retained prior value, a digest -- and wrong wherever the record is a reading of something else."
+    repair: "assert the SHAPE the record must have rather than the value it happens to hold. The rewritten test requires that the FAIL not be reachable by deletion -- prior_verdict, prior measurement, and what closed it must all survive -- and the verdict itself is gated by a digest over the invariants, which goes red when the world moves instead of freezing what the record said last."
+    the_general_form: "A TEST OVER A RECORDED MEASUREMENT PINS THE RECORD, NOT THE PROPERTY. Where the measurement can go stale, something separate must watch the thing measured; the pin cannot, because from inside it a stale record and a true one are the same bytes."
+    severity: two_mechanisms_agreeing_on_a_false_state_with_every_suite_correctly_green
+    found_by: "reconciling two probe runs and noticing that repairing the invariant had turned nothing red"
+
   - name: the_check_that_ended_a_coverage_failure_was_itself_enumerated
     target: "does any document in this pair make a stale claim about the sibling?"
     subject: "do the two documents someone listed make one?"
@@ -288,7 +300,31 @@ coverage_specified_by_enumeration:
   how_to_tell_you_are_in_it: "the check NAMES what it looks at instead of deriving it."
   why_it_is_the_sharpest: "a check specified by enumeration is correct exactly until the world grows an item nobody added to the list, and it fails SILENTLY at that moment -- it reports success, because the thing it enumerates is still fine. No coverage at all leaves a visible hole; coverage-by-enumeration reports green over the hole, and the green is then cited as evidence."
   its_repair_rule_is_adopted_for_the_whole_class: "ASSERT THE PROPERTY, NOT THE ENUMERATION. Sharper than the general diagnostic below and strictly stronger where it applies: adding the missing item fixes one instance, asserting the property fixes the class. The shadow guard follows it -- it refuses any module binding a test name twice, over every module found, rather than checking the files known to have had the problem."
-  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 20 instances below, each measured, not the fact that two authors named it."
+  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 21 instances below, each measured, not the fact that two authors named it."
+
+# ---------------------------------------------- the predictive tools --
+#
+# Two entries in this file are answerable WITHOUT an instance in hand,
+# from structure alone. Everything else here is a diagnosis written after
+# a measurement; these two are questions you can ask of a design that has
+# not failed yet, and they are the only reason to expect this file to be
+# worth anything to someone who did not live through it.
+#
+#   THE PAIR QUESTION. For any check, name the thing it verifies and the
+#       thing it actually reads. Where those differ, the check is
+#       answering something adjacent to its claim.
+#
+#   THE POLICY QUESTION. For any re-run condition, expiry, refresh rule
+#       or 'must be revisited when X changes' written in prose: name the
+#       EVENT it fires on, then ask what goes red when that event
+#       happens. If the answer is a person remembering, the policy is
+#       decoration.
+#
+# The second was recorded on 2026-08-26 and immediately found three stale
+# cross-repository claims by being turned on the checks rather than the
+# documents, which is the only evidence offered that it predicts rather
+# than describes. One use is not a track record, and the convergence
+# caveat above applies to a tool exactly as it applies to a class.
 
 # ------------------------------------------------------- the pattern --
 

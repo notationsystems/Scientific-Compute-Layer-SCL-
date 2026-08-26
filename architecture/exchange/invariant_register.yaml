@@ -1,0 +1,109 @@
+"artifact": "invariant_register"
+"extends": "core@1.0.0"
+"extends_join":
+  "artifacts_declaring_a_different_core": []
+  "artifacts_declaring_the_core": 33
+  "counted_by": "parsing every YAML document, never by text search"
+  "why_that_matters_here": "core.yaml recorded 26. Parsed, it is 32. A search for `extends: core@1.0.0` cannot see `\"extends\": \"core@1.0.0\"`, which is exactly what the shared canonical emitter writes -- so the artifacts invisible to the count were the canonically-emitted ones, the most carefully produced files in the pair."
+"joined_on":
+  "annotating_label_carried": "core@1.0.0"
+  "gitlink_at_generation": "3e5bea973d0e801eadfb9d472aa3d07c930616c3"
+  "referent": "submodule_commit"
+  "value": "3e5bea9"
+  "why_not_the_label": "the version is ANNOTATING -- upstream controls it and it can move without the vendored code changing. This register would otherwise join three parties on a string one of them can rewrite. See architecture/core.yaml core_referent."
+"owner": "daf"
+"parties":
+  "daf":
+    "invariant_count": 43
+    "invariant_source": "architecture/invariants.yaml"
+    "reachable_from_this_register": true
+    "role": "acquisition layer; holds the vendored core"
+    "source_kind": "machine_readable_id_rule_status"
+    "status_histogram":
+      "absent": 4
+      "blocked": 3
+      "enforced": 25
+      "partially_enforced": 5
+      "represented_unenforced": 1
+      "vacuously_enforced": 5
+  "scl":
+    "exchanged_as": "architecture/exchange/scl_contract_clauses.yaml"
+    "invariant_count": 11
+    "invariant_source": "native/include/scl/operation.hpp"
+    "reachable_from_this_register": true
+    "role": "compute layer"
+    "source_kind": "numbered_contract_in_a_header_checked_against_the_binary"
+    "status_histogram": null
+    "why_no_status_histogram": "SCL's clauses carry no status vocabulary. A clause has a dedicated test and a mutation shown to break it, or it does not. Mapping that onto this repository's status words would make the register join on a term meaning two things."
+  "ste":
+    "evidence":
+      "cardinalities_asserted":
+        "10_invariants":
+          - "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+      "documents_mentioning_invariants":
+        - "README.md"
+        - "docs/ARCHITECTURE.md"
+        - "docs/ARCHITECTURE_SPEC.md"
+        - "docs/DATA_CAPABILITIES.md"
+        - "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+        - "docs/PHASE_14_DATA_POOL_ARCHITECTURE.md"
+        - "docs/SCOUT_ARCHITECTURE.md"
+      "numbers_referenced":
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+        - 7
+        - 8
+      "structured_source_files": []
+    "invariant_count": null
+    "invariant_source": null
+    "reachable_from_this_register": false
+    "role": "the core; deterministic-state-architecture, vendored and unmodifiable"
+    "source_kind": "referenced_by_number_defined_in_a_brief_this_tree_does_not_hold"
+    "status_histogram": null
+"purpose": "which party owns which invariants, held where, checkable by whom. Derived, never listed: every count and every id in this file is read from a source at generation time."
+"the_core_partys_invariants_are_not_enumerated_anywhere_here":
+  "cardinalities_found":
+    "10_invariants":
+      - "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+  "finding": "the party every `bent: zero` is a claim about is the one party with no enumeration. Its own documents disagree on the cardinality."
+  "numbers_referenced":
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+  "the_brief_is_not_in_the_tree": "ARCHITECTURE_SPEC.md says 'Invariants I1-I8 (see brief)'. There is no brief in the vendored tree, and no YAML of any kind in it."
+"what_bent_zero_actually_rests_on":
+  "measured_at_generation":
+    "gitlink": "3e5bea973d0e801eadfb9d472aa3d07c930616c3"
+    "modifiable": false
+    "recorded_submodule_commit": "3e5bea9"
+    "working_tree_matches_the_pin": true
+  "the_claim_as_worded": "zero core invariants required modification"
+  "the_stronger_observable_that_entails_it": "the core's bytes are unmodified at the participating referent. Zero files changed entails zero invariants changed, whatever they are and however many -- so the claim is SUPPORTED, by a different route than its wording implies."
+  "what_is_NOT_claimed": "that STE's invariants hold. Nothing here inspects them, because nothing here can. The claim is that this pair did not modify them."
+  "what_would_break_the_entailment": "a submodule bump. The moment the pin moves, `bent: zero` stops being entailed by byte-identity and has to be re-established against a set still nobody has enumerated. That is the register's standing recommendation: a core bump is not a routine update."
+  "why_it_cannot_be_checked_as_worded": "an unenumerated set has no members to check. A claim quantified over it is not false; it is unfalsifiable in the form it is written."
+"what_this_register_does_not_do": "it does not reconcile statuses across parties, because there is nothing to reconcile: SCL has no status vocabulary and STE has no enumeration. The only cross-party status claims that exist are DAQ invariants cited in SCL-authored artifacts, and those are already checked by tests/test_cross_repository_claims.py over every document this repository holds. Adding a second mechanism here would be the parallel architecture this pair has refused everywhere else."
+"which_property_set_bent_zero_quantifies_over":
+  "resolved": true
+  "the_canonical_set_is_the_union_of_both_axes":
+    "computation_properties":
+      - "recursive_computation"
+    "observation_properties":
+      - "non_reproducible"
+      - "revocable_record"
+      - "cohort_identity"
+      - "uncontrolled_conditions"
+    "total": 5
+  "the_divergence_measured_in_git": "ca3d0aa recorded the probe at 52 lines with FOUR observation properties and no computation axis at all; c80a2f0 recorded it at 73 lines, adding recursive_computation as a COMPUTATION property and an outcome.failed list to go with it. Every `bent: zero` written before c80a2f0 quantifies over four properties; every one after quantifies over five. Verified against git in tests/test_invariant_register.py rather than asserted here."
+  "the_question": "`bent: zero` is a claim about a SET of properties, and the generality probe's set has changed size once. A claim written against the old set and read against the new one is two different claims wearing the same words."
+  "what_prevents_it_recurring": "tests/test_generality_probe_gate.py asserts a PARTITION: every property either axis declares appears in exactly one outcome list, and every outcome-list member is a declared property. A property added to either axis without a result and a placement now fails, so the set cannot grow silently underneath a `bent: zero` again."
+  "why_the_axes_are_separate_and_not_merged": "appending recursive_computation to the observation list would have been a category error -- it is not a property any source's OBSERVATIONS can have. The probe recorded that reasoning at the time and it is why the set grew a second axis instead of a fifth member."

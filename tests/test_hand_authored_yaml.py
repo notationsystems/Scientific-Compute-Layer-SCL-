@@ -99,7 +99,7 @@ def test_no_hand_authored_yaml_uses_a_non_empty_flow_collection(path):
     )
 
 
-def test_every_yaml_we_hold_is_in_the_shared_set_the_sibling_verifies():
+def test_every_yaml_we_hold_is_on_the_surface_the_sibling_verifies():
     """The cross-repository dependency, made explicit and checked.
 
     Every YAML file here is byte-identical in the acquisition repository,
@@ -107,16 +107,46 @@ def test_every_yaml_we_hold_is_in_the_shared_set_the_sibling_verifies():
     is what makes the weaker syntactic check above sufficient -- and it is
     only true while it is true. A file added here and not shared would be
     covered by nothing stronger than the flow-collection scan, and this
-    test is where that decision has to be made deliberately."""
+    test is where that decision has to be made deliberately.
+
+    REWRITTEN 2026-08-26, when verify_pair_landed's SHARED tuple became a
+    DERIVED intersection of the two trees. This test used to read that
+    tuple, which made it depend on an enumeration to prove an absence --
+    and the enumeration was missing three files at the moment it was
+    replaced, one of them the pair checker itself.
+
+    It cannot be replaced by reading the intersection, because that needs
+    both repositories and only one is present here. So it asserts the
+    property one repository CAN establish alone: every YAML this side
+    holds lives on the shared surface. Byte-identity across that surface
+    is then established at landing time, by the check that has both trees.
+    """
     import verify_pair_landed as vpl
 
-    shared = {(REPO_ROOT / name).resolve() for name in vpl.SHARED}
-    held = {p.resolve() for p in _hand_authored_yaml()}
-    unshared = sorted(p.relative_to(REPO_ROOT) for p in held - shared)
-    assert not unshared, (
-        "these YAML files are held here but are not in the shared set, so the "
-        f"sibling's two-parser check never sees them: {unshared}. Either share "
-        "them or state here why the syntactic check alone is enough for them."
+    surface = (REPO_ROOT / vpl.SHARED_SURFACE).resolve()
+    off_surface = sorted(
+        path.relative_to(REPO_ROOT) for path in _hand_authored_yaml()
+        if surface not in path.resolve().parents
+    )
+    assert not off_surface, (
+        f"these YAML files are held here but are not on the shared surface "
+        f"({vpl.SHARED_SURFACE}/), so the sibling never holds them and its two-parser check "
+        f"never sees them: {off_surface}. Either move them onto the surface or state here why "
+        "the syntactic check alone is enough for them."
+    )
+
+
+def test_the_shared_surface_is_not_empty_here():
+    """The domain again: a surface this repository holds nothing on would
+    make the check above vacuously true."""
+    import verify_pair_landed as vpl
+
+    surface = (REPO_ROOT / vpl.SHARED_SURFACE).resolve()
+    assert surface.is_dir(), f"{vpl.SHARED_SURFACE}/ does not exist here"
+    held = _hand_authored_yaml()
+    on_surface = [p for p in held if surface in p.resolve().parents]
+    assert on_surface and len(on_surface) == len(held), (
+        "the shared surface holds no YAML, so the check above asserts nothing"
     )
 
 

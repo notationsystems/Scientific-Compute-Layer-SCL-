@@ -96,7 +96,34 @@ MUTATIONS = [
         'return b"ste.scl.shared.v1"',
         "test_clause11_every_operation_has_its_own_program_identity",
     ),
+    (
+        7, "an operation emits ANOTHER operation's metric key",
+        "native/src/op_fourier.cpp",
+        '{"native_compute_seconds", compute_seconds},',
+        '{"native_compute_seconds", compute_seconds}, {"n_particles", 0.0},',
+        "test_clause7_no_operation_emits_another_operations_metrics",
+    ),
 ]
+
+#: Clauses with no mutation, DERIVED from the table above rather than
+#: listed beside it. Added 2026-08-26, when the three-party register's SCL
+#: half parsed this file and reported clause 7 as `tested_only` -- tests
+#: claiming it, no mutation ever written against it. Nothing here said so:
+#: `CLAUSES_WITHOUT_A_DEDICATED_TEST` reports missing TESTS, and a clause
+#: with tests and no mutation looked identical to a fully covered one.
+#:
+#: The asymmetry is the point. A named slot for one kind of gap and none
+#: for the other is coverage-by-enumeration wearing the clothes of the
+#: repair for it: the slot that exists gets maintained, and the axis with
+#: no slot is not forgotten so much as never nameable.
+def clauses_without_a_mutation(contract_header, mutations):
+    """Clause numbers in the contract that no mutation targets."""
+    import re
+    declared = {
+        int(m.group(1))
+        for m in re.finditer(r"^//\s{0,2}(\d+)\.\s+[A-Z]", contract_header, re.M)
+    }
+    return sorted(declared - {clause for clause, *_ in mutations})
 
 #: Empty, and kept as a named slot rather than deleted: the moment a new
 #: clause is added to the contract without a test, it belongs here where
@@ -249,6 +276,15 @@ def main() -> int:
     for clause, verdict, description in verdicts:
         if verdict != "CAUGHT":
             print(f"  clause {clause}: {verdict} -- {description}")
+
+    header = (REPO / "native" / "include" / "scl" / "operation.hpp").read_text()
+    unmutated = clauses_without_a_mutation(header, MUTATIONS)
+    if unmutated:
+        print("\nCLAUSES WITH NO MUTATION (reported, not hidden):", unmutated)
+        print("  a clause with tests and no mutation is a clause whose tests have")
+        print("  never been shown capable of failing. Clause 10 is PROBE THE RULE,")
+        print("  NOT THE TESTS -- a procedure, not a property of a registry entry --")
+        print("  so it is expected here; anything else on this line is a gap.")
 
     if CLAUSES_WITHOUT_A_DEDICATED_TEST:
         print("\nCLAUSES WITH NO DEDICATED TEST (reported, not hidden):")
