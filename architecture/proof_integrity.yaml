@@ -86,6 +86,16 @@ instances:
     the_distinction_the_check_had_to_preserve: "a superseded status is not automatically a defect -- this pair deliberately retains dated measurements. So a superseded status RETAINED WITH THE CURRENT ONE STATED BESIDE IT passes, and a superseded status STANDING ALONE fails. Both are expressible and only one is a defect."
     severity: two_corrections_behind_with_every_suite_green
 
+  - name: a_test_that_asserted_more_than_its_recorded_expectation
+    target: "did the pre-registered prediction hold?"
+    subject: "did the narrower thing the run happened to check hold?"
+    what_happened: "the revocable-record probe recorded the observable as 'the store refuses, OR the original bytes survive unchanged'. The run asserted only the exception. None was raised, the bytes DID survive, and the run reported that content-addressing is not enforced on write and every digest in the pair is unreliable -- a prediction that held, reported as catastrophically failing."
+    why_it_is_not_the_same_as_restating_thresholds: "the run READ the expectation file correctly. It then checked something narrower than what it read. A pre-registration binds only if the run is faithful to it, and faithfulness is not established by reading -- the same distinction as a digest check that verifies bytes against a sidecar both of which moved together."
+    the_second_defect_underneath_it: "the stimulus reached past the public API. put_observation derives the id FROM the observation, so no caller can supply a mismatched pair; the forgery required the private _write. An outcome produced by bypassing the public surface is not evidence about the public surface -- the cohort probe's lesson, arriving in the next probe, and this time it would have been a serious FALSE claim rather than an inverted one."
+    what_caught_it: "the expectations had flagged that specific outcome as bigger than the probe's scope, so it was re-examined before being reported. A predicted catastrophic result is the one to check hardest, not the one to publish fastest."
+    repair: "assert the recorded observable in the form it was recorded -- including its disjunction -- and split the genuinely reachable behaviour into its own case rather than folding it into the one that overreached."
+    severity: a_held_prediction_reported_as_a_catastrophic_failure
+
   - name: a_gate_applied_to_content_it_does_not_govern
     target: "was the planted violation refused by the mechanism it was planted for?"
     subject: "was it refused?"
@@ -241,7 +251,7 @@ coverage_specified_by_enumeration:
   how_to_tell_you_are_in_it: "the check NAMES what it looks at instead of deriving it."
   why_it_is_the_sharpest: "a check specified by enumeration is correct exactly until the world grows an item nobody added to the list, and it fails SILENTLY at that moment -- it reports success, because the thing it enumerates is still fine. No coverage at all leaves a visible hole; coverage-by-enumeration reports green over the hole, and the green is then cited as evidence."
   its_repair_rule_is_adopted_for_the_whole_class: "ASSERT THE PROPERTY, NOT THE ENUMERATION. Sharper than the general diagnostic below and strictly stronger where it applies: adding the missing item fixes one instance, asserting the property fixes the class. The shadow guard follows it -- it refuses any module binding a test name twice, over every module found, rather than checking the files known to have had the problem."
-  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 16 instances below, each measured, not the fact that two authors named it."
+  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 17 instances below, each measured, not the fact that two authors named it."
 
 # ------------------------------------------------------- the pattern --
 
