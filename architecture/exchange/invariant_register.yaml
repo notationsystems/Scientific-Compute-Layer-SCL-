@@ -48,9 +48,9 @@
   "why_that_matters_here": "core.yaml recorded 26. Parsed, it is 32. A search for `extends: core@1.0.0` cannot see `\"extends\": \"core@1.0.0\"`, which is exactly what the shared canonical emitter writes -- so the artifacts invisible to the count were the canonically-emitted ones, the most carefully produced files in the pair."
 "joined_on":
   "annotating_label_carried": "core@1.0.0"
-  "gitlink_at_generation": "3e5bea973d0e801eadfb9d472aa3d07c930616c3"
+  "gitlink_at_generation": "5e146d5924675cd7b6e1d1ed44fb39f5da012610"
   "referent": "submodule_commit"
-  "value": "3e5bea9"
+  "value": "5e146d5"
   "why_not_the_label": "the version is ANNOTATING -- upstream controls it and it can move without the vendored code changing. This register would otherwise join three parties on a string one of them can rewrite. See architecture/core.yaml core_referent."
 "owner": "daf"
 "parties":
@@ -80,15 +80,31 @@
     "evidence":
       "cardinalities_asserted":
         "10_invariants":
+          - "docs/DERIVED_INVARIANT_REGISTER.md"
+          - "docs/INVARIANT_SET_RECONCILIATION.md"
           - "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+        "26_invariants":
+          - "docs/DERIVED_INVARIANT_REGISTER.md"
+        "51_invariants":
+          - "docs/DERIVED_INVARIANT_REGISTER.md"
       "documents_mentioning_invariants":
         - "README.md"
+        - "architecture/generated/doctrine/builder.md"
+        - "architecture/generated/doctrine/validator.md"
         - "docs/ARCHITECTURE.md"
         - "docs/ARCHITECTURE_SPEC.md"
+        - "docs/ARCHITECTURE_SYNC.md"
         - "docs/DATA_CAPABILITIES.md"
+        - "docs/DERIVED_INVARIANT_REGISTER.md"
+        - "docs/INVARIANT_SET_RECONCILIATION.md"
         - "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
         - "docs/PHASE_14_DATA_POOL_ARCHITECTURE.md"
+        - "docs/RUST_EXECUTION_SEMANTIC_BOUNDARY.md"
         - "docs/SCOUT_ARCHITECTURE.md"
+        - "docs/STE_EXECUTION_VERTICAL.md"
+        - "docs/STE_STAGE10_VERIFICATION_ARTIFACT.md"
+        - "docs/STE_STAGE7_VERIFICATION_POLICY.md"
+        - "docs/TRANSFORMER_ENGINE.md"
       "numbers_referenced":
         - 1
         - 2
@@ -98,13 +114,35 @@
         - 6
         - 7
         - 8
-      "structured_source_files": []
-    "invariant_count": null
-    "invariant_source": null
-    "reachable_from_this_register": false
+        - 9
+        - 10
+      "structured_source_files":
+        - "architecture/_probes/generality.yaml"
+        - "architecture/canonical_state_invariants.yaml"
+        - "architecture/chemistry_reachability.yaml"
+        - "architecture/core.yaml"
+        - "architecture/evidence_class.yaml"
+        - "architecture/exchange/invariant_register.yaml"
+        - "architecture/exchange/ste_invariant_declaration.yaml"
+        - "architecture/invariants.yaml"
+        - "architecture/model_binding.yaml"
+        - "architecture/transformer_contract.yaml"
+        - "architecture/verticals/chemistry/vertical.yaml"
+        - "architecture/vocabulary_map.yaml"
+    "exchange_register":
+      "bound_parties": 3
+      "invariant_count": 58
+      "path": "vendor/scout-retrieval-agent/architecture/exchange/invariant_register.yaml"
+      "readable_by_this_repositorys_reader": true
+      "rows_present": 58
+      "why_this_path_and_not_the_architecture_files": "the exchange directory is the interop surface and its artifacts are emitted by the shared canonical emitter, which both readers agree on. Of STE's four architecture documents this reader reads exactly one, and it is this one."
+    "invariant_count": 58
+    "invariant_source": "vendor/scout-retrieval-agent/architecture/exchange/invariant_register.yaml"
+    "reachable_from_this_register": true
     "role": "the core; deterministic-state-architecture, vendored and unmodifiable"
-    "source_kind": "referenced_by_number_defined_in_a_brief_this_tree_does_not_hold"
+    "source_kind": "declared_in_the_counterpartys_exchange_register"
     "status_histogram": null
+    "what_changed_when_the_pin_moved": "at the previous pin this party had no enumeration reachable from here and this entry recorded that as a measured absence. The pin moved and the enumeration arrived. The absence was never a claim about what STE's invariants ARE -- only about what this tree held -- which is why the entry changes without anything recorded here turning out to have been wrong."
 "purpose": "which party owns which invariants, held where, checkable by whom. Derived, never listed: every count and every id in this file is read from a source at generation time."
 "ste_invariants_reconstruction":
   "artifact": "architecture/exchange/ste_invariants.yaml"
@@ -115,7 +153,13 @@
 "the_core_partys_invariants_are_not_enumerated_anywhere_here":
   "cardinalities_found":
     "10_invariants":
+      - "docs/DERIVED_INVARIANT_REGISTER.md"
+      - "docs/INVARIANT_SET_RECONCILIATION.md"
       - "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+    "26_invariants":
+      - "docs/DERIVED_INVARIANT_REGISTER.md"
+    "51_invariants":
+      - "docs/DERIVED_INVARIANT_REGISTER.md"
   "finding": "the party every `bent: zero` is a claim about is the one party with no enumeration. Its own documents disagree on the cardinality."
   "numbers_referenced":
     - 1
@@ -126,12 +170,14 @@
     - 6
     - 7
     - 8
+    - 9
+    - 10
   "the_brief_is_not_in_the_tree": "ARCHITECTURE_SPEC.md says 'Invariants I1-I8 (see brief)'. There is no brief in the vendored tree, and no YAML of any kind in it."
 "what_bent_zero_actually_rests_on":
   "measured_at_generation":
-    "gitlink": "3e5bea973d0e801eadfb9d472aa3d07c930616c3"
+    "gitlink": "5e146d5924675cd7b6e1d1ed44fb39f5da012610"
     "modifiable": false
-    "recorded_submodule_commit": "3e5bea9"
+    "recorded_submodule_commit": "5e146d5"
     "working_tree_matches_the_pin": true
   "the_claim_as_worded": "zero core invariants required modification"
   "the_stronger_observable_that_entails_it": "the core's bytes are unmodified at the participating referent. Zero files changed entails zero invariants changed, whatever they are and however many -- so the claim is SUPPORTED, by a different route than its wording implies."

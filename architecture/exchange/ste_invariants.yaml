@@ -1,10 +1,11 @@
+"a_known_defect_this_file_carries": "it is HALF-FROZEN. The per-invariant verdicts are hand-written and frozen; the reference index is re-scanned from the vendored tree on every generation. At the new pin the index finds individual citations for I1 and I2 that the frozen verdicts call unrecoverable. Both halves are right about different trees, and an artifact live in one half and frozen in the other is worse than either. Choosing between freezing the index and retiring this file for the declaration is a decision about what a superseded reconstruction IS, and it is left as one rather than settled in passing. The divergence is pinned as EXPECTED in tests/test_invariant_register.py so it cannot be mistaken for agreement."
 "artifact": "ste_invariants"
 "authored_by": "daf"
 "extends": "core@1.0.0"
 "measured_at":
   "modifiable": false
   "referent_kind": "submodule_commit"
-  "submodule_commit": "3e5bea9"
+  "submodule_commit": "5e146d5"
 "owner": "ste"
 "reconstruction":
   "I1":
@@ -65,6 +66,42 @@
     - "I8"
   "the_honest_summary": "two of eight are pinned by their citations, four are inferred from joint citations and say what would refute them, and two cannot be recovered at all -- they are cited only inside a range. Nothing above is offered as STE's meaning; it is offered as the most the documents constrain."
 "reference_index":
+  "I1":
+    - "document": "docs/DERIVED_INVARIANT_REGISTER.md"
+      "line": 379
+      "text": "independently here: I3–I8 cited individually, I1/I2 only inside one"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 33
+      "text": "| **I1, I2** | **unrecoverable** — cited only inside the range `I1–I8`, whose referent is a brief not in this repository at any path | — | — |"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 78
+      "text": "I1, I2, I9 and I10 are **not** registered. A rule that cannot be stated"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 107
+      "text": "so I1 and I2 stay unrecoverable at any effort. A newer submodule pin on"
+  "I10":
+    - "document": "docs/DERIVED_INVARIANT_REGISTER.md"
+      "line": 380
+      "text": "range, **I9 and I10 cited nowhere at all**. The range defers to a"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 34
+      "text": "| **I9, I10** | **no referent** — cited nowhere: not a document, not a test, not a comment | — | — |"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 78
+      "text": "I1, I2, I9 and I10 are **not** registered. A rule that cannot be stated"
+  "I2":
+    - "document": "docs/DERIVED_INVARIANT_REGISTER.md"
+      "line": 379
+      "text": "independently here: I3–I8 cited individually, I1/I2 only inside one"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 33
+      "text": "| **I1, I2** | **unrecoverable** — cited only inside the range `I1–I8`, whose referent is a brief not in this repository at any path | — | — |"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 78
+      "text": "I1, I2, I9 and I10 are **not** registered. A rule that cannot be stated"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 107
+      "text": "so I1 and I2 stay unrecoverable at any effort. A newer submodule pin on"
   "I3":
     - "document": "docs/ARCHITECTURE_SPEC.md"
       "line": 627
@@ -72,6 +109,18 @@
     - "document": "docs/ARCHITECTURE_SPEC.md"
       "line": 757
       "text": "into `CanonicalState`, `Version`, or `ProjectedState` (I3, I8). `geometry_id`"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 32
+      "text": "| **I3** | partially — 2 citations | inference never produces canonical truth | **the one bridge** |"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 39
+      "text": "**The one bridge:** I3's content — nothing writes back into canonical"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 84
+      "text": "Of I3 through I8, **only I5 was ever cited by a test.** I3, I6, I7 and I8"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 84
+      "text": "Of I3 through I8, **only I5 was ever cited by a test.** I3, I6, I7 and I8"
   "I4":
     - "document": "docs/ARCHITECTURE_SPEC.md"
       "line": 170
@@ -79,6 +128,12 @@
     - "document": "docs/ARCHITECTURE_SPEC.md"
       "line": 627
       "text": "produces canonical truth (I3, I4)."
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 30
+      "text": "| **I4** | partially — 3 citations, all on edges | relationships are stated, never inferred | none |"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 85
+      "text": "appeared in *implementation* docstrings and nowhere else; I4 in prose"
     - "document": "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
       "line": 55
       "text": "| Relationship | `CanonicalState.edges` / `EdgeRecord` (explicit only, I4) → `MorphoRelation` (adds `is_canonical`/`inference_status`) | Solid, already proven (Phase 12's `\"precedes\"`/`\"relationships\""
@@ -95,6 +150,12 @@
     - "document": "docs/ARCHITECTURE_SPEC.md"
       "line": 761
       "text": "`id` itself changes (which, per I5, doesn't happen in v1)."
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 28
+      "text": "| **I5** | fully — 8 citations, stated verbatim in `core/canonical/state.py` | a field's identity is its key, never its value | none |"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 84
+      "text": "Of I3 through I8, **only I5 was ever cited by a test.** I3, I6, I7 and I8"
     - "document": "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
       "line": 51
       "text": "| Identity | `Field.id` == its own dict key (I5) → `Entity.id` unchanged → `geometry_id`/`visual_id`/`node_id`/`cell_id` (all identity functions on the same string, `morpho/identity.py`) | Deliberate,"
@@ -123,6 +184,15 @@
     - "document": "docs/ARCHITECTURE_SPEC.md"
       "line": 1052
       "text": "satisfying I6/I7 underneath."
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 29
+      "text": "| **I6/I7** | fully for the rule, partially for the split | same (version, compiler, config) ⇒ byte-equivalent projection | none |"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 36
+      "text": "The two numbers are cited together everywhere I6 and I7 appear, so"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 84
+      "text": "Of I3 through I8, **only I5 was ever cited by a test.** I3, I6, I7 and I8"
   "I7":
     - "document": "docs/ARCHITECTURE_SPEC.md"
       "line": 705
@@ -130,6 +200,15 @@
     - "document": "docs/ARCHITECTURE_SPEC.md"
       "line": 1052
       "text": "satisfying I6/I7 underneath."
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 29
+      "text": "| **I6/I7** | fully for the rule, partially for the split | same (version, compiler, config) ⇒ byte-equivalent projection | none |"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 36
+      "text": "The two numbers are cited together everywhere I6 and I7 appear, so"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 84
+      "text": "Of I3 through I8, **only I5 was ever cited by a test.** I3, I6, I7 and I8"
   "I8":
     - "document": "docs/ARCHITECTURE_SPEC.md"
       "line": 757
@@ -137,24 +216,53 @@
     - "document": "docs/ARCHITECTURE_SPEC.md"
       "line": 884
       "text": "`renderer/index.html`'s in-memory runtime (I8)."
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 31
+      "text": "| **I8** | partially — 3 citations | extrinsic representation state never enters canonical state | none |"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 84
+      "text": "Of I3 through I8, **only I5 was ever cited by a test.** I3, I6, I7 and I8"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 84
+      "text": "Of I3 through I8, **only I5 was ever cited by a test.** I3, I6, I7 and I8"
     - "document": "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
       "line": 469
       "text": "| Representation metadata (backend config, layout) | No, and never has been (`ThreeJSRenderConfig`/`DiagramLayoutConfig` are not part of `CanonicalState` at all) | **No** | This is I8/§12's extrinsic-"
+  "I9":
+    - "document": "docs/DERIVED_INVARIANT_REGISTER.md"
+      "line": 380
+      "text": "range, **I9 and I10 cited nowhere at all**. The range defers to a"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 34
+      "text": "| **I9, I10** | **no referent** — cited nowhere: not a document, not a test, not a comment | — | — |"
+    - "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 78
+      "text": "I1, I2, I9 and I10 are **not** registered. A rule that cannot be stated"
+"standing": "SUPERSEDED_BY_THE_DECLARATION"
 "status": "RECONSTRUCTION_NOT_DECLARATION"
+"superseded_by": "vendor/scout-retrieval-agent/architecture/canonical_state_invariants.yaml, declared by its owner and bound into that repository's exchange register"
 "the_cardinality_conflict":
   "asserted_in_documents":
     "10_invariants":
+      - "docs/DERIVED_INVARIANT_REGISTER.md"
+      - "docs/INVARIANT_SET_RECONCILIATION.md"
       - "docs/PHASE_13_ARCHITECTURE_INVESTIGATION.md"
+    "26_invariants":
+      - "docs/DERIVED_INVARIANT_REGISTER.md"
+    "51_invariants":
+      - "docs/DERIVED_INVARIANT_REGISTER.md"
   "numbers_cited_individually":
+    - 1
+    - 2
     - 3
     - 4
     - 5
     - 6
     - 7
     - 8
-  "numbers_covered_only_by_a_range":
-    - 1
-    - 2
+    - 9
+    - 10
+  "numbers_covered_only_by_a_range": []
   "ranges_cited":
     - "covers":
         - "I1"
@@ -169,14 +277,132 @@
       "line": 71
       "range": "I1-I8"
       "text": "Invariants I1–I8 (see brief) hold at every arrow above: arrows point strictly"
+    - "covers":
+        - "I1"
+        - "I2"
+        - "I3"
+        - "I4"
+        - "I5"
+        - "I6"
+        - "I7"
+        - "I8"
+        - "I9"
+        - "I10"
+      "document": "docs/DERIVED_INVARIANT_REGISTER.md"
+      "line": 376
+      "range": "I1-I10"
+      "text": "renumbering of I1–I10 and must not be read as one. Mapping them"
+    - "covers":
+        - "I3"
+        - "I4"
+        - "I5"
+        - "I6"
+        - "I7"
+        - "I8"
+      "document": "docs/DERIVED_INVARIANT_REGISTER.md"
+      "line": 379
+      "range": "I3-I8"
+      "text": "independently here: I3–I8 cited individually, I1/I2 only inside one"
+    - "covers":
+        - "I1"
+        - "I2"
+        - "I3"
+        - "I4"
+        - "I5"
+        - "I6"
+        - "I7"
+        - "I8"
+        - "I9"
+        - "I10"
+      "document": "docs/DERIVED_INVARIANT_REGISTER.md"
+      "line": 554
+      "range": "I1-I10"
+      "text": "- **The I1–I10 numbered set** is unrecoverable from this repository —"
+    - "covers":
+        - "I1"
+        - "I2"
+        - "I3"
+        - "I4"
+        - "I5"
+        - "I6"
+        - "I7"
+        - "I8"
+        - "I9"
+        - "I10"
+      "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 15
+      "range": "I1-I10"
+      "text": "| **I1–I10**, in prose | the **canonical-state / projection** core: identity, edges, determinism, the extrinsic boundary | 10 claimed |"
+    - "covers":
+        - "I1"
+        - "I2"
+        - "I3"
+        - "I4"
+        - "I5"
+        - "I6"
+        - "I7"
+        - "I8"
+      "document": "docs/INVARIANT_SET_RECONCILIATION.md"
+      "line": 33
+      "range": "I1-I8"
+      "text": "| **I1, I2** | **unrecoverable** — cited only inside the range `I1–I8`, whose referent is a brief not in this repository at any path | — | — |"
   "referenced_nowhere_at_all":
-    - 9
-    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 26
+    - 27
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    - 33
+    - 34
+    - 35
+    - 36
+    - 37
+    - 38
+    - 39
+    - 40
+    - 41
+    - 42
+    - 43
+    - 44
+    - 45
+    - 46
+    - 47
+    - 48
+    - 49
+    - 50
+    - 51
   "what_it_means": "the spec cites the range I1-I8; a later phase document says all 10 invariants were re-verified. The numbers in the gap are cited nowhere at all, so the larger count is not merely unenumerated -- it names invariants no document in the tree ever mentions again."
 "the_request_to_ste":
   "one": "declare the invariant set in a file the repository holds, ids and rules, one entry each."
-  "there_is_no_counterparty_response_and_this_file_does_not_pretend_one": "scl_requirements.yaml has daq_requirement_response.yaml beside it because there was a party to answer. There is none here. This request stands unanswered and is recorded as unanswered rather than as an agreement."
+  "the_answer":
+    "arrived_by": "moving the pin from 3e5bea9 to 5e146d5, 68 commits"
+    "at": "vendor/scout-retrieval-agent/architecture/exchange/ste_invariant_declaration.yaml"
+    "one_declare_the_invariant_set": "ANSWERED. Declared in architecture/canonical_state_invariants.yaml, and bound into the counterparty's exchange register -- three parties, 58 rows -- which is the artifact this repository now cites."
+    "three_rerun_the_probe_against_five_properties": "ANSWERED, and it was treated as OPEN until measured rather than assumed answered because its two siblings were -- which would have been the subset-read-as-the-set error a third time. Verdict none_at_the_execution_boundary, deliberately not the word the four observation rows carry, and explicitly SILENT on the evidence-lineage half of recursion, which is DAQ's half and is now enforced here."
+    "two_resolve_the_cardinality": "ANSWERED, and better than either option offered. NEITHER eight nor ten: the range's referent is a brief outside the tree, so eight is unrecoverable, and ten is unsupported. Both retracted rather than one swapped for the other, on the stated grounds that swapping one unsupported number for another would look like a fix. Six constrained, five statable -- a floor, not a total."
+  "the_call_this_repository_makes": "ANSWERED. The counterparty's declaration explicitly left the call open -- answered, disputed, or partially answered -- and did not make it on this repository's behalf. All three asks are met and the third is met with a distinction this side did not ask for and should have. Recorded as answered."
+  "there_is_no_counterparty_response_and_this_file_does_not_pretend_one": "SUPERSEDED, and the premise was the part that was wrong. This read: there was no party to answer, so the request stood unanswered. There was a party; it was outside the tree this repository could see, because the pin predated the directory its declaration lives in. The declaration was not missing, it was out of view -- which is why the absence recorded here was never a claim about what STE's invariants ARE, only about what this tree held."
   "three": "re-run the generality probe against the FIVE-property canonical set -- four observation properties plus recursive_computation -- because every `bent: zero` recorded in this pair before c80a2f0 quantified over four."
   "two": "resolve the cardinality: eight or ten. If ten, the two beyond the cited range have never appeared in any document here."
+  "what_is_NOT_thereby_confirmed": "the reconstruction. Where this file's readings agree with the declaration, that is agreement and not confirmation -- same source documents, same method, no independence. The declaration says so first and this file does not soften it."
 "what_status_means": "STE has not declared its invariant set. This is what its own documents CONSTRAIN, reconstructed by another party, and it must never be cited as STE's own statement. A set written about a party by another party is not that party's set -- the same reason a decision authored with both pens was demoted to a proposal in this pair's own history."
+"what_supersession_means_here": "this file stops being the best available account and becomes the record of what one party could recover before the other declared. Its readings are NOT retracted -- where they agree with the declaration that is agreement and not confirmation, and where the declaration goes further this file simply had less to go on."
 "why_it_cannot_be_written_into_ste": "core.yaml records modifiable: false, and `bent: zero` is currently entailed by the core's bytes being unmodified at the pinned commit. A declaration written INTO the vendored tree would move the pin and destroy the entailment that carries the claim. It has to come from upstream."
+"why_it_is_not_re_derived_against_the_new_pin": "measured: re-scanning at the new pin changes the reading. I1 and I2 are cited individually somewhere in the 68 commits of documents that arrived, so the index no longer reports them as range-only, while this file's per-invariant verdicts still say unrecoverable. That divergence is not a defect to reconcile -- it is a reconstruction outliving its basis. A reconstruction is an account of what a tree held at a commit; re-deriving it against a tree that now DECLARES the thing would produce neither a reconstruction nor a declaration. It is frozen at what it measured, and the declaration is cited for what is true now."
