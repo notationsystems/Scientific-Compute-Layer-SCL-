@@ -389,6 +389,12 @@
     - 50
     - 51
   "what_it_means": "the spec cites the range I1-I8; a later phase document says all 10 invariants were re-verified. The numbers in the gap are cited nowhere at all, so the larger count is not merely unenumerated -- it names invariants no document in the tree ever mentions again."
+"the_deferral":
+  "deferred_while": "nothing but its own test reads this artifact's reference_index. While the half-frozen state is inert, the cost of deciding wrongly exceeds the cost of waiting. The moment anything CONSUMES the index, the divergence becomes load-bearing and the deferral lapses -- a stale index feeding a live consumer is the shape this pair has spent several phases removing."
+  "not_a_decision": "recorded as UNDECIDED. It is not a preference, a lean, or a plan -- either resolution may be right and neither has been chosen."
+  "trigger_enforced_by": "tests/test_invariant_register.py::test_the_deferral_on_the_half_frozen_reconstruction_still_holds"
+  "what_is_undecided": "whether to freeze the reference index alongside the verdicts, or retire this file entirely for the counterparty's declaration. Both are defensible and they are different answers to what a SUPERSEDED RECONSTRUCTION is."
+  "why_a_trigger_and_not_a_note": "DAQ has carried its parked items in prose, and prose is how two of the counterparty's faded. A deferral with no condition attached is indistinguishable from an omission after the session that made it ends. This one states what keeps it valid and fails when that stops being true."
 "the_request_to_ste":
   "one": "declare the invariant set in a file the repository holds, ids and rules, one entry each."
   "the_answer":

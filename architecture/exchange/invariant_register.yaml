@@ -174,6 +174,13 @@
     - 10
   "the_brief_is_not_in_the_tree": "ARCHITECTURE_SPEC.md says 'Invariants I1-I8 (see brief)'. There is no brief in the vendored tree, and no YAML of any kind in it."
 "what_bent_zero_actually_rests_on":
+  "checked_as_worded_for_the_first_time":
+    "enforcement": "tests/test_bent_zero_is_checkable.py"
+    "the_declared_set": "five canonical-state invariants stated as rules, eleven rows in the counterparty's exchange register, none contested"
+    "the_result": "SILENCE, NOT CLEANLINESS. Every declared invariant names a subject under core.*, and no authored package here imports core.* at all. By this repository's own rule -- admission_reachability.yaml's zero_rate_when_unreachable -- a zero over a subject nothing reaches is not a measurement."
+    "what_the_check_found_that_was_not_enforced": "unreachability was only PARTLY checked. epistemics/ had a leaf-layer test forbidding core, three adapter files had their own, and daf/, science/, bridge/, boundary/ and assertion/ had none -- so the zero was structural for some packages and incidental for the rest, with nothing saying which. Coverage specified by enumeration, inside the check the claim now depends on. Closed as a property over every authored package, derived rather than listed, and detector-proved."
+    "when": "the pin moved to 5e146d5 and the core party declared its set"
+    "why_it_is_still_a_real_improvement": "the claim moved from UNFALSIFIABLE to FALSIFIABLE. Before, the set had no members, so nothing could make it fail. Now it has members and one becomes reachable the moment any authored module imports its subject. It can fail; today it does not."
   "measured_at_generation":
     "gitlink": "5e146d5924675cd7b6e1d1ed44fb39f5da012610"
     "modifiable": false
@@ -182,7 +189,7 @@
   "the_claim_as_worded": "zero core invariants required modification"
   "the_stronger_observable_that_entails_it": "the core's bytes are unmodified at the participating referent. Zero files changed entails zero invariants changed, whatever they are and however many -- so the claim is SUPPORTED, by a different route than its wording implies."
   "what_is_NOT_claimed": "that STE's invariants hold. Nothing here inspects them, because nothing here can. The claim is that this pair did not modify them."
-  "what_would_break_the_entailment": "a submodule bump. The moment the pin moves, `bent: zero` stops being entailed by byte-identity and has to be re-established against a set still nobody has enumerated. That is the register's standing recommendation: a core bump is not a routine update."
+  "what_would_break_the_entailment": "this said a submodule bump, and BOTH HALVES of that turned out differently. The pin moved 68 commits and the bytes are STILL unmodified -- core/ is byte-identical across the whole range -- so the entailment did not lapse. And the set is no longer unenumerated: the core party declared it. What actually breaks the entailment is a bump that CHANGES core/; what breaks the as-worded check is an authored module importing core.*. Both are measured now rather than predicted."
   "why_it_cannot_be_checked_as_worded": "an unenumerated set has no members to check. A claim quantified over it is not false; it is unfalsifiable in the form it is written."
 "what_this_register_does_not_do": "it does not reconcile statuses across parties, because there is nothing to reconcile: SCL has no status vocabulary and STE has no enumeration. The only cross-party status claims that exist are DAQ invariants cited in SCL-authored artifacts, and those are already checked by tests/test_cross_repository_claims.py over every document this repository holds. Adding a second mechanism here would be the parallel architecture this pair has refused everywhere else."
 "which_property_set_bent_zero_quantifies_over":
