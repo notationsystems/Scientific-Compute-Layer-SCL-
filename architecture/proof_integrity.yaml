@@ -86,6 +86,31 @@ instances:
     the_distinction_the_check_had_to_preserve: "a superseded status is not automatically a defect -- this pair deliberately retains dated measurements. So a superseded status RETAINED WITH THE CURRENT ONE STATED BESIDE IT passes, and a superseded status STANDING ALONE fails. Both are expressible and only one is a defect."
     severity: two_corrections_behind_with_every_suite_green
 
+  - name: a_clause_that_named_the_wrong_actor
+    target: "does the party who must act know that they must?"
+    subject: "is the obligation written down somewhere?"
+    what_happened: "polymer_acquisition_readiness.yaml called `the EXTRACTOR emits one Record per RUN` the one irreversible precondition. Extractors do not emit Records: run_scout builds exactly one per RawDocument and hands it TO the extractor. The granularity is the ADAPTER'S."
+    why_it_is_the_worst_shape_a_clause_can_have: "an author who read that sentence and wrote only an extractor would have VIOLATED the precondition while believing they had satisfied it. Compliance and violation look identical from inside the clause. Every other defect in this file is visible to someone who looks; this one is invisible to the person doing exactly what they were told."
+    it_is_not_a_wording_slip: "the clause was ENFORCED -- there is a gate, and it fires. It fires on the wrong boundary. A clause naming no actor is vague and gets questioned; a clause naming the wrong actor is precise and gets obeyed."
+    how_it_was_found: "by a concurrent session building the acquisition path the clause governs. Not by re-reading it -- reading it again produces the same wrong picture, because the sentence is internally coherent."
+    repair: "bind the corrected clause to a test that RE-MEASURES run_scout's granularity rather than re-reading the sentence. A clause about who does what is checkable only against what the code actually does."
+    the_general_form: "FOR ANY OBLIGATION, NAME THE ACTOR AND THEN GO AND CHECK THAT THE ACTOR IS THE ONE WHO CAN DISCHARGE IT. An obligation placed on a party that lacks the capability is satisfied vacuously by that party and violated invisibly by the one that has it."
+    the_diagnostic: "trace the mechanism, not the sentence. If the named actor's code cannot produce the outcome, the clause is on the wrong layer no matter how precisely it is written."
+    severity: an_author_following_the_clause_exactly_would_have_broken_the_unrepairable_precondition
+    found_by: "a concurrent session building the path the clause governs"
+
+  - name: a_stale_reproduction_looks_exactly_like_a_measurement
+    target: "what does the code under test do now?"
+    subject: "what does my reconstruction of it do?"
+    what_happened: "checking whether a gate claim was false, a reproduction was written from memory of the content shape and run against the live gates. It reported a refusal -- MISSING_VARIABLE_IDENTITY, VARIABLE_IDENTITY_UNDER_A_RETIRED_NAME -- and the finding `even the one gate my test applies now refuses` was one sentence from being published. The reproduction used the RETIRED key name; a concurrent session had migrated the content days earlier. The real test content passes that gate."
+    why_it_is_dangerous: "a stale reproduction has every surface property of a measurement. It executes, it prints numbers, it is deterministic, it can be re-run, and it is genuinely about the live code. It is simply about the code plus an input the world no longer produces -- and nothing in the output says which half is stale."
+    what_made_it_worse_here: "it CONFIRMED the direction of the finding under way. The claim being checked was that a gate assertion overreached; the stale reproduction said so, more strongly. A result that agrees with the hypothesis is the one that gets published without a second look, which is the same mechanism as the forced-answer instance in this file."
+    how_it_was_caught: "the test it claimed to reproduce was PASSING. Two statements about the same content that cannot both be true is the cheapest possible tell, and it only appears if you check the reproduction against the thing reproduced rather than against the source."
+    the_general_form: "WHEN REPRODUCING A CLAIM ABOUT CODE OTHERS ARE CHANGING, DERIVE THE INPUT FROM THE CODE, NOT FROM YOUR PICTURE OF IT. Read the fixture the test builds; do not rebuild it. A reproduction is a second implementation, and a second implementation drifts."
+    the_diagnostic: "before believing a reproduction, run the thing it reproduces. If they disagree, the reproduction is the suspect -- it is the newer and less reviewed of the two."
+    severity: a_near_miss_that_would_have_published_a_refusal_that_does_not_happen
+    found_by: "the reproduced test passing while the reproduction refused"
+
   - name: a_case_that_does_not_distinguish_the_property_from_its_negation
     target: "does the property hold?"
     subject: "does this particular example produce the expected number?"
@@ -349,7 +374,7 @@ coverage_specified_by_enumeration:
   how_to_tell_you_are_in_it: "the check NAMES what it looks at instead of deriving it."
   why_it_is_the_sharpest: "a check specified by enumeration is correct exactly until the world grows an item nobody added to the list, and it fails SILENTLY at that moment -- it reports success, because the thing it enumerates is still fine. No coverage at all leaves a visible hole; coverage-by-enumeration reports green over the hole, and the green is then cited as evidence."
   its_repair_rule_is_adopted_for_the_whole_class: "ASSERT THE PROPERTY, NOT THE ENUMERATION. Sharper than the general diagnostic below and strictly stronger where it applies: adding the missing item fixes one instance, asserting the property fixes the class. The shadow guard follows it -- it refuses any module binding a test name twice, over every module found, rather than checking the files known to have had the problem."
-  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 24 instances below, each measured, not the fact that two authors named it."
+  and_the_convergence_caveat_applies_to_this_entry_too: "two layers reaching this class in one phase is why it is filed now. Per convergence_is_not_evidence above, that is a prompt rather than a proof -- what makes it a class is the 26 instances below, each measured, not the fact that two authors named it."
 
 # ---------------------------------------------- the predictive tools --
 #
