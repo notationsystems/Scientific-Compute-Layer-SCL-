@@ -1,7 +1,15 @@
 "artifact": "invariant_register"
 "bent_zero_claims_held_here":
-  "count": 11
+  "count": 12
   "does_the_fifth_property_change_any_of_the_ten": "NO, and this is measured rather than assumed. recursive_computation's verdict was FAIL and its subject was generation_depth_bounded -- an invariant of THIS repository, not of the core. The probe recorded core_invariants_modified: 0 for it at the time and still does: the invariant was declared and never implemented, which is a truthfulness repair and then an implementation, never a core modification. So the ten verdicts stand as verdicts."
+  "mention_count": 2
+  "mentions_not_claims":
+    - "document": "docs/PHASE_38_THE_REGISTER_AND_THE_FIRST_VERTICAL.md"
+      "line": 162
+      "text": "## Bent: zero"
+    - "document": "docs/PHASE_38_THE_REGISTER_AND_THE_FIRST_VERTICAL.md"
+      "line": 173
+      "text": "`c80a2f0` held it at 73 with the fifth added. Every `Bent: zero` written before"
   "occurrences":
     - "document": "docs/PHASE_26_EXECUTION_RECORD_INTEGRATION.md"
       "line": 262
@@ -36,10 +44,14 @@
     - "document": "docs/PHASE_36_SCIENTIFIC_MODALITY_AND_SCL_INTERFACE.md"
       "line": 399
       "text": "**Bent: zero.** `core_invariants_modified` remains 0. `generation_depth_bounded`'s *rule* is"
+    - "document": "docs/PHASE_38_THE_REGISTER_AND_THE_FIRST_VERTICAL.md"
+      "line": 164
+      "text": "**Bent: zero.** No core invariant required modification in this phase."
   "the_property_set_split": "ten of them were written when the generality probe declared FOUR properties; one was written after it declared five. Same words, two assertions. Which set each quantified over is verified against git in tests/test_invariant_register.py, not asserted here."
   "what_stops_it_recurring": "this block is derived by scanning the documents, so a `Bent: zero` written tomorrow and not accounted for here moves the register's digest and fails its test until someone re-derives -- which is the point at which they have to say what set they mean."
   "what_they_are": "every `Bent: zero` written in this repository's phase reports is a claim that no CORE invariant changed -- a claim about STE, the party with no enumeration."
   "what_was_wrong_was_not_the_verdicts": "it was that nothing recorded WHICH SET each claim quantified over. A verdict that happens to survive a change in what it quantifies over is not a verdict that accounted for the change. All eleven rest on the same byte-identity entailment named above, which is what actually carries them."
+  "why_both_are_recorded": "the scan matches the CLAIM FORM -- the bolded assertion every phase report making one uses. Anything else naming the phrase is a mention: a heading, a backticked reference, prose about the class. Both are listed so the narrowing is visible, and so a claim written in some new form appears here as a mention with no claim beside it."
 "extends": "core@1.0.0"
 "extends_join":
   "artifacts_declaring_a_different_core": []
