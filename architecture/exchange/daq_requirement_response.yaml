@@ -4,9 +4,12 @@
 "generated_by": "architecture/exchange/build_daq_requirement_response.py"
 "owner": "daf"
 "paired_artifact": "scl_requirements.yaml, in the compute layer's repository"
-"responds_to_workload": "kalman_filter_linear"
+"responds_to_workloads":
+  - "kalman_filter_linear"
+  - "least_squares"
+  - "pca"
 "responses":
-  "recursive_generation_depth":
+  "kalman_filter_linear::recursive_generation_depth":
     "daq_built": "science/lineage_depth.py -- evidence-lineage depth, bounded, recorded per record, and verified against lineage rather than trusted."
     "evidence":
       - "BOTH CLAUSES now implemented. The rule reads 'derivation from derivation is bounded and the depth is recorded' and was measured to be implemented in neither: nothing was bounded and no depth was recorded."
@@ -23,7 +26,7 @@
     "what_remains_yours": "computation identity is yours and execution identity is STE's. DAQ owns and now enforces the evidence-lineage semantics only."
     "what_the_requirement_asked": "generation_depth_bounded must acquire an operative semantic domain before a recursive operation can be admitted. It is currently declared with status vacuously_enforced and zero references; a Kalman trajectory is the first thing that would make it bite, so the rule must exist BEFORE the first recursive result, not be retrofitted around one."
     "where_depth_lives": "DerivedValue.content. The vendored DerivedValue carries exactly (id, derived_from, method, content, confidence, derived_at) and is never modified, so depth is declared in content and VERIFIED against lineage rather than being a field anyone can set freely."
-  "structured_measurement_uncertainty":
+  "kalman_filter_linear::structured_measurement_uncertainty":
     "daq_built": "science/structured_uncertainty.py -- a measurement covariance R admitted into an observation, with the requirement's ONLY-WHEN clause enforced as a correspondence rule between value and uncertainty."
     "evidence":
       - "an n-component value with an n-row uncertainty and n component units is admitted"
@@ -36,6 +39,53 @@
     "reproduce": "python -m pytest tests/test_structured_uncertainty.py"
     "what_daq_deliberately_does_not_check": "numeric entry, rectangular, square, symmetric, positive-semidefinite -- the five your covariance contract states. A ragged R of the right outer length is ADMITTED here, with a test asserting it, so none of the five may be assumed checked upstream."
     "what_the_requirement_asked": "DAQ must be able to express a measurement covariance R, not only a scalar uncertainty per observation. A scalar is sufficient ONLY when the measurement is genuinely 1-D and uncorrelated; for a measurement vector it discards the off-diagonal terms that determine how the filter weights components against each other."
-"rows_addressed_are_derived_not_listed": "both DAQ-owned blocking rows the requirements artifact lists for this workload. The count is taken from the artifact programmatically rather than from prose -- a subset read as the set is a mistake this pair has now made three times."
+  "least_squares::explicit_missing_value_semantics":
+    "and_the_second_clause_is_not_daqs_to_close": "`or elided by dropping rows` is about what a CONSUMER does with a table, not about what an observation carries. DAQ makes the absent cell representable and refuses the shapes that would hide it; whether a fit silently drops the row is decided where the fit happens."
+    "daq_built": "science/table.py -- absence as STRUCTURE rather than as a value, with a closed reason vocabulary."
+    "evidence":
+      - "absence is expressed by a `value_absence` key naming a reason from a closed set: not_measured, below_detection, above_range, withheld, lost_in_acquisition"
+      - "a null value with no reason is REFUSED as MISSING_ABSENCE_REASON -- so `absent` cannot be asserted without saying which absence it is"
+      - "a reason outside the vocabulary is REFUSED as UNKNOWN_ABSENCE_REASON"
+      - "a value AND an absence together is REFUSED as VALUE_AND_ABSENCE_BOTH_PRESENT"
+      - "a non-finite value is REFUSED as SENTINEL_ENCODED_ABSENCE, and separately at the acquisition boundary by daf/extractors/_passthrough.py before it can reach an Observation id"
+    "reproduce": "python -m pytest tests/test_aligned_observation_table.py"
+    "what_daq_deliberately_does_not_check": "AN IN-RANGE SENTINEL. Measured: value = -999.0 and value = 9999 are ADMITTED, with no reason code from any gate. Only NON-FINITE sentinels are caught. Your statement says missing values must not be `encoded as a sentinel number`, and DAQ answers the half it can: absence has a structural representation, so a sentinel is unnecessary, and the sentinels that are type-distinguishable are refused. A magic number inside the valid range of the quantity is indistinguishable from a measurement without domain knowledge DAQ does not have, and nothing here detects one. Do not assume this half closed."
+    "what_the_requirement_asked": "Missing values must be explicitly represented and their semantics stated, not encoded as a sentinel number or elided by dropping rows."
+  "least_squares::stable_sample_and_variable_identity":
+    "a_supplementary_check_that_is_an_enumeration_and_is_reported_as_one": "POSITIONAL_IDENTITY_IS_NOT_IDENTITY additionally refuses content carrying positional-looking KEY NAMES. Measured: `row_index` and `position` fire; `row`, `index` and `ordinal` do not. It is a denylist of names, it is not the protection, and it must not be read as one -- the type rule above is what closes the clause. Reported rather than quietly relied on."
+    "daq_built": "science/table.py -- observation_is_table_alignable, an aligned-observation-table gate over an already-admitted observation. Built 2026-08-26 and reported here for the first time; DAQ had not answered this row."
+    "evidence":
+      - "a missing sample identity is REFUSED as MISSING_SAMPLE_IDENTITY; a missing variable identity as MISSING_VARIABLE_IDENTITY"
+      - "THE ROW-POSITION CLAUSE IS ENFORCED BY TYPE, which is the part that matters: an integer sample identity is REFUSED as UNTYPED_SAMPLE_IDENTITY and an integer variable identity as UNTYPED_VARIABLE_IDENTITY. A row ordinal presented as an identity does not pass, whatever it is called."
+      - "the identity types are held apart from their presence deliberately: an int sample id and the str form of the same number are DIFFERENT JOIN KEYS, so a partially-typed table splits in two and a fit runs over half its rows with healthy-looking residuals. That is the failure this row's consequence_if_unmet describes, reached by a different route."
+      - "a first acquisition path now produces content that passes this gate: daf/extractors/gpc_report.py, five runs of two variables, admissible with zero reasons. Before it, the gate had only ever been applied to constructed observations."
+    "reproduce": "python -m pytest tests/test_aligned_observation_table.py tests/test_gpc_acquisition.py"
+    "what_the_requirement_asked": "Each observation must carry a sample identity sufficient to align a response with its predictors, and a variable identity sufficient to know which column is which. Row position is NOT an acceptable identity here, because ordering is explicitly not required by this modality."
+  "pca::commensurable_units_or_explicit_scaling":
+    "and_commensurability_itself_is_not_daqs": "DAQ records the unit per variable. Whether two recorded units are COMMENSURABLE, and whether a scaling choice is asserted as a model parameter, are model decisions at the fit. DAQ supplies the channel; it does not supply the comparison."
+    "daq_built": "science/admissibility.py -- a unit is required per quantity, and science/structured_uncertainty.py holds component units to correspond with the value's components."
+    "evidence":
+      - "a missing or empty unit is REFUSED as MISSING_UNIT, so a dimensionless payload cannot pass as a quantity"
+      - "for a multivariate value, a unit list whose length does not match the components is REFUSED as UNITS_DO_NOT_MATCH_COMPONENTS, and a non-string component unit as UNTYPED_COMPONENT_UNIT -- so per-variable units are recorded rather than assumed shared"
+    "reproduce": "python -m pytest tests/test_aligned_observation_table.py tests/test_structured_uncertainty.py"
+    "what_daq_deliberately_does_not_check": "THE SCALAR UNIT IS NOT TYPED. Measured: unit = 3, unit = 3.5, unit = True, unit = [\"g/mol\"] and unit = {} all PASS quantity_is_typed; only a missing or empty unit fires MISSING_UNIT. This is presence-not-type, the same asymmetry architecture/invariants.yaml already records for the table gate's identities, one field over -- and it is load-bearing here, because a unit that is not a string cannot be compared for commensurability at all. DAQ reports this row as PARTIALLY evidenced for that reason."
+    "what_the_requirement_asked": "Units per variable must be recorded, because PCA over mixed units is scale-dependent: the result changes if a variable is expressed in metres rather than millimetres. Either the units are commensurable or the scaling choice is asserted explicitly as a model parameter."
+  "pca::stable_sample_and_variable_identity":
+    "daq_built": "the same capability. Answered as its own row rather than folded into the least_squares one, because the two rows carry DIFFERENT statement text and a response keyed by requirement name alone would silently answer one workload's question with the other's."
+    "evidence":
+      - "identical mechanism and identical measurements to the least_squares row of this name; nothing workload-specific was built"
+      - "your statement says both are the multivariate_observation_table modality and are satisfied by the same DAQ-side capability. DAQ confirms the capability is one capability, and answers both rows so neither is left looking unanswered."
+    "reproduce": "python -m pytest tests/test_aligned_observation_table.py"
+    "what_the_requirement_asked": "Identical to the least_squares requirement of the same name, and satisfied by the same DAQ-side capability -- both are the multivariate_observation_table modality."
+"row_accounting":
+  "answered_here": 6
+  "daq_owned_rows_upstream": 8
+  "how_that_assertion_is_actually_held": "BY CONSTRUCTION, not by a check. not_answered_and_why is the derived complement of the answered set within the DAQ-owned rows, so the two cannot fail to reconcile while the derivation stands. The generator's completeness branch is therefore UNREACHABLE today and is recorded as silent rather than as passing; what it guards against is that derivation being replaced by a written-out list, which is the edit that would reintroduce the defect."
+  "not_answered_and_why":
+    "fourier_transform_1d::annotating_sample_spacing": "SATISFIED upstream before this artifact existed, on evidence the requirements artifact records against the row itself. Listed so the count reconciles and the row is visibly considered rather than invisibly skipped."
+    "fourier_transform_1d::ordered_scalar_sequence": "SATISFIED upstream before this artifact existed, on evidence the requirements artifact records against the row itself. Listed so the count reconciles and the row is visibly considered rather than invisibly skipped."
+  "the_assertion": "answered + not_answered == daq_owned_rows_upstream. Every DAQ-owned row is in exactly one of the two."
+  "what_does_fire": "the stray-row refusal. A response naming a row the requirements artifact does not declare -- a row withdrawn upstream, or a typo -- stops the generator. Detector-proved by planting one."
+"rows_addressed_are_derived_not_listed": "every DAQ-owned blocking row the requirements artifact declares, across EVERY workload it declares -- not a workload named here. The counts below are computed from the artifact; a subset read as the set is a mistake this pair has now made three times, and the previous version of this field described a derivation whose scope was nonetheless a hardcoded name."
 "states_no_status": "deliberately. Every row carries what DAQ built, what it measured and how to re-run it, and stops. The status of a requirement in your artifact is yours to set; writing SATISFIED here would be DAQ answering your question about your own requirement."
 "the_names_are_one_party": true
