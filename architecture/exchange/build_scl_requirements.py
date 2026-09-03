@@ -167,6 +167,26 @@ def _registered_operations():
 REGISTERED = _registered_operations()
 
 
+#: The cutoff `least_squares` applies to the design matrix, PARSED from the
+#: header that declares it rather than typed here.
+#:
+#: WHY IT IS PUBLISHED AT ALL. The blocking requirement below tells the
+#: acquisition layer to establish that a covariance is positive definite
+#: "by the same rule this operation applies to the design". A rule without
+#: its threshold is not actionable, and the alternative -- the counterparty
+#: typing 1e-12 into its own module -- is a second encoding of a value this
+#: repository owns and can change. Published so it can be JOINED ON.
+def _rank_tolerance_default():
+    header = (REPO_ROOT / "native" / "include" / "scl" / "least_squares.hpp").read_text()
+    match = re.search(r"double rank_tolerance = ([0-9.eE+-]+);", header)
+    if match is None:                                    # pragma: no cover
+        raise SystemExit("rank_tolerance not found in least_squares.hpp")
+    return float(match.group(1))
+
+
+RANK_TOLERANCE_DEFAULT = _rank_tolerance_default()
+
+
 def workload(*, modality, minimum_observation_fields, required_metadata, uncertainty,
              conditions, ordering, structured, observation_requirements, model_parameters,
              computational_parameters, primitives_required, name,
@@ -316,7 +336,11 @@ WORKLOADS = {
                 "measured_basis": "The polymer row is exactly this case: an instrument reports Mn, Mw and PDI = Mw/Mn together, so in logs the third variable is identically the second minus the first and the third row of Sigma is the second minus the first. Over 2000 five-run replicate sets of that situation a plain Cholesky ACCEPTED 828 and REFUSED 1172, the outcome decided by where the last pivot lands relative to zero. Every accepted case had a pivot ratio below the operation own 1e-12 default. A pivoted Cholesky at that tolerance returned effective rank 2 for all 2000. Measured in tests/test_least_squares_semidefinite_covariance.py and recorded in native/include/scl/least_squares.hpp.",
                 "consequence_if_unmet": "Not an inexact fit -- a NON-DETERMINISTIC one. Three times in five the whitening refuses loudly; the other two it succeeds and the deficient row of the whitened problem is made entirely of rounding noise, small enough to look harmless because numerator and denominator vanish together. The same data gives either outcome on a different machine.",
                 "why_it_is_daq_owned": "the covariance is produced there. SCL cannot check a Sigma it never receives, because the wire carries weights only -- so this is stated rather than enforced, the same disposition as the two rows above it.",
-                "status": "UNSATISFIED",
+                "answered_on": "2026-09-03, in the same session that raised it, which is why the evidence is named rather than the answer taken on trust.",
+                "the_answer": "science/replicate_pairing.py computes the effective rank of every sample covariance by pivoted Cholesky under THIS operation's cutoff, reports RANK_DEFICIENT_COVARIANCE when a direction carries no variance, and returns the rank and the tolerance together -- a rank being meaningless without the threshold that produced it. Deficiency does not discard the covariance: the correlations that are real remain recoverable, and what is reported is that one direction is not.",
+                "and_the_threshold_is_joined_rather_than_copied": "the acquisition layer reads `published_constants.least_squares_rank_tolerance_default` from this artifact and RAISES if it is absent, rather than defaulting. That constant is parsed from least_squares.hpp by this generator, so the chain runs header -> generator -> artifact -> consumer with a digest in the middle. A change to the default now reissues the pair instead of leaving a stale copy behind.",
+                "verified_by_planting": "a control measuring the third quantity independently instead of deriving it is full rank, so the deficiency is attributed to the relation between the variables rather than to the sample size; and the rank is unchanged at 4, 8 and 20 runs, so collecting more replicates is shown not to repair it.",
+                "status": "SATISFIED",
             },
             {
                 "requirement": "linear_algebra_primitive_family",
@@ -533,6 +557,14 @@ DOCUMENT = {
         "depth_rule_if_adopted": "depth=0 when initialization_provenance=measured and every input stream is class=measured; depth=prior_depth+1 when initialization_provenance=computed(prior_id); GUARD: if the measurement stream is itself computed, depth inherits from the STREAM rather than the initialization, which closes composition and not merely recursion",
     },
     "substrate_inventory": SUBSTRATE,
+    "published_constants": {
+        "least_squares_rank_tolerance_default": RANK_TOLERANCE_DEFAULT,
+        "where_it_is_declared": "native/include/scl/least_squares.hpp, LeastSquaresParameters::rank_tolerance",
+        "what_it_means": "a singular value sigma_j is treated as zero when sigma_j <= rank_tolerance * sigma_max. It is a PARTICIPATING parameter of the operation: two fits at different tolerances are different computations.",
+        "why_it_is_published": "the covariance blocking requirement on least_squares tells the acquisition layer to establish definiteness by the same rule this operation applies to the design. A rule without its threshold is not actionable, and the alternative is the counterparty typing the number into its own module -- a second encoding of a value this repository owns and can change. Published so it can be joined on rather than copied.",
+        "it_is_parsed_not_typed": "read from the header by the generator, so a change to the default moves this artifact and reissues the pair rather than leaving the published value behind.",
+        "what_it_does_not_authorise": "a consumer applying this cutoff to something other than a spectrum of the same kind. It is a relative cutoff on singular values or on Cholesky pivots, which are the same sort of object; it is not a general small-number threshold.",
+    },
     "unresolved_edges": {
         "comparability_is_weaker_than_identity": {
             "edge": "The annotating-parameter rule makes equal computation_identity compatible with different interpretations. Two Fourier results over the same samples with different dt are comparable as BIN-INDEXED VECTORS and are NOT comparable as SPECTRA, because bin k denotes a different physical frequency in each.",
