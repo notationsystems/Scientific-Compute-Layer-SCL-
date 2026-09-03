@@ -1,0 +1,50 @@
+# SCORING THIS LAYER AGAINST A NUMERICAL CONTRACT ANOTHER PARTY WROTE,
+# WHICH FOUND A SILENT DEFECT HERE.
+#
+# Measured 2026-09-03 against notationsystems/BIM-State-Transformer-Engine
+# at codex/proof-carrying-state 1517e0fa902e0920bbdebb104d5f5e823a031bd2.
+extends: core@1.0.0
+
+subject: numeric_contract_conformance
+status: measured_and_one_defect_repaired
+owner: scl
+enforcement: native/tests/test_kalman_analytic.cpp
+recorded: "2026-09-03"
+
+# ----------------------------------------------------------------------
+where_this_came_from:
+  not_from_here: "an ecosystem coherence scan read a repository this pair had never opened. Its docs/proof-carrying-state-v1.md specifies a NumericContract that every proof-carrying transition must bind: profile_id, profile_digest, arithmetic in checked-integer | signed-fixed-point | ieee754-binary64, a named rounding policy, checked overflow for integer and fixed-point, and -- the clause that mattered -- binary64 arithmetic must reject non-finite results."
+  why_a_foreign_schema_was_worth_scoring_against: "it is a list of questions somebody else thought a numerical layer should be able to answer, written without this layer in view. A conformance check against a schema written here would have asked the questions this layer already answers."
+  the_general_form: "reading another party's contract is a cheap source of the ONE thing hardest to generate from inside a system -- a question its authors did not think to ask. Two of the six fields below were already answered and pinned; one was not, and it was not because nobody had asked."
+
+# ----------------------------------------------------------------------
+the_scoring:
+  arithmetic: "ANSWERED. IEEE-754 float64 throughout, and -fno-fast-math pinned in native/CMakeLists.txt so reductions are not reassociated. Already published in architecture/exchange/scl_requirements.yaml."
+  rounding: "NOT DECLARED. The build never sets a rounding mode, so it is the platform default, round-to-nearest-ties-to-even. That is almost certainly what every reader assumes and it is not written down anywhere, which is the difference between a property and an assumption."
+  overflow_or_non_finite_results: "WAS NOT CHECKED IN ONE OPERATION, and that is the defect below."
+  a_participating_threshold_that_the_schema_has_no_field_for: "rank_tolerance, 1e-12, parsed from least_squares.hpp by the exchange generator. It is a participating parameter -- two fits at different tolerances are different computations -- and Codex's schema has no place to put it. Recorded as a gap in the FOREIGN schema, not in this layer, and not proposed to them here."
+  profile_digest: "NOT APPLICABLE YET. This layer publishes its constants inside architecture/exchange/scl_requirements.yaml, which is digest-bound. A separate numeric-profile document with its own digest is what a proof-carrying integration would need and nothing here needs it today."
+
+# ----------------------------------------------------------------------
+the_defect_this_found:
+  where: "native/src/kalman.cpp, run_kalman_filter."
+  what_was_true: "lj_pairwise, fourier_transform_1d and least_squares each check their own RESULTS for finiteness. run_kalman_filter checked its inputs -- transition, observation, initial state, measurements, and all three covariances through the five-rule gate -- and never its outputs."
+  why_the_inputs_being_clean_is_the_point: "overflow inside the recursion is not a contract breach by the caller. Every validation above the loop can pass and the loop can still produce a NaN, so nothing that existed could catch it."
+  and_the_one_diagnostic_it_publishes_points_the_wrong_way: "the operation reports smallest_posterior_eigenvalue, a running minimum over the posterior spectrum at every step. C++ std::min(x, NaN) returns x. So a filter whose every posterior is NaN leaves that minimum at the +infinity it was initialised to -- which is the reading a PERFECTLY CONDITIONED filter gives. The worse the arithmetic went, the healthier the one published number looked."
+  measured_before_the_repair: "a scalar model, all inputs finite, 400 steps. At |F| = 1e130 everything is finite and the eigenvalue is 1. At 1e150, 399 of 400 states, covariances, gains and innovation covariances are non-finite and the eigenvalue reads 1.2326e+268. At 1e155 and above, 400 of 400 are non-finite and the eigenvalue reads +inf. Neither of the last two raised anything at all."
+  what_is_NOT_claimed: "that a transition matrix of 1e155 is a plausible model. It is not. The claim is that the failure is SILENT, that it is silent across a range rather than at one point, and that in the worse half of that range the only health figure the operation publishes reports the best value it can take. A defect whose indicator points at health is worse than one with no indicator."
+  the_repair: "require_finite_results, applied to states, covariances, innovations, innovation covariances and gains after the loop. It names which array and which step, because a message that says only `non-finite result` returns the reader to the recursion with no starting point."
+  why_it_throws_rather_than_reporting: "KalmanResult has no error field; the operation's contract is that it throws KalmanValidationError on a breach. Adding a result-side error field would be a second way to report failure in an operation that already has one."
+
+# ----------------------------------------------------------------------
+the_verification:
+  the_discriminating_case_is_the_load_bearing_one: "a guard that refuses everything passes the overflow test perfectly. So the suite also asserts that |F| = 1e130 still runs, returns a finite eigenvalue, and produces finite states."
+  the_third_test_and_why_it_exists: "the new refusal would be dead code if the eigenvalue minimum already detected a NaN. A test asserts directly that it does not -- std::min(+inf, NaN) is +inf and is not NaN -- so the reason the check is not redundant is asserted rather than argued in a comment."
+  planted_and_watched_to_fail: "TWO. Commenting out the call reproduced the pre-repair state and the suite reported 9 failures. Replacing the finiteness predicate with one that refuses every value made the suite abort on an earlier test, which is the discriminating half firing. Both restored, then 4451 checks and 0 failures."
+  the_suites: "native ctest 3 of 3 passed; python 395 passed, 1 skipped."
+
+# ----------------------------------------------------------------------
+what_this_record_must_not_become:
+  the_risk: "a claim that this layer conforms to a proof-carrying numerical contract. It does not, and no such conformance was attempted."
+  what_was_actually_done: "six fields of a foreign schema were scored, three answered, one not declared, one not applicable, and one found a defect that is now repaired and covered. That is the whole scope."
+  the_open_item_deliberately_left_open: "the rounding policy is undeclared. Writing `round-to-nearest-ties-to-even` into an artifact would be recording an assumption as a measurement -- what the build actually guarantees is the platform default, and nothing here pins it or tests it. Stating it as measured would be the substitution this pair keeps catching. It is named here as undeclared so the next person can pin it deliberately."

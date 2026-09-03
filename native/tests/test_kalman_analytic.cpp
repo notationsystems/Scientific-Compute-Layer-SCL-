@@ -12,7 +12,10 @@
 #include "scl/kalman.hpp"
 
 #include <cmath>
+#include <algorithm>
 #include <cstdio>
+#include <limits>
+#include <string>
 #include <vector>
 
 namespace {
@@ -375,6 +378,81 @@ void test_the_contract_also_holds_at_the_optimal_gain_over_many_steps() {
     CHECK(worst_asymmetry == 0.0);
 }
 
+// ------------------------------------------------------------ finite results
+//
+// FOUND BY READING SOMEBODY ELSE'S REPOSITORY. Codex's proof-carrying-state
+// document for the BIM engine states that binary64 arithmetic must reject
+// non-finite results. Scoring this layer against that rule showed
+// lj_pairwise, fourier_transform_1d and least_squares all check their own
+// outputs, and this operation did not -- the one operation that also
+// publishes a health figure a NaN makes maximally reassuring, because
+// std::min(x, NaN) returns x and the running minimum stays at its initial
+// +infinity.
+//
+// The regimes below were measured before the check existed:
+//   |F| = 1e130  -> everything finite, eigenvalue 1
+//   |F| = 1e150  -> 399/400 states non-finite, eigenvalue 1.2e268, no error
+//   |F| = 1e155  -> 400/400 non-finite, eigenvalue +inf, no error
+// Neither of the last two is a plausible transition matrix, and that is not
+// the claim. The claim is that both were SILENT and the worse one reported
+// the healthiest possible number.
+
+scl::KalmanProblem divergent_scalar_problem(double f, std::size_t steps) {
+    scl::KalmanProblem p = scalar_problem(1.0, 1.0, 1.0, steps);
+    p.transition = {f};
+    return p;
+}
+
+void test_a_filter_that_overflows_is_refused_rather_than_returned() {
+    // every input finite -- the caller has breached nothing
+    for (double f : {1e150, 1e155, 1e200}) {
+        scl::KalmanProblem p = divergent_scalar_problem(f, 400);
+        CHECK(std::isfinite(p.transition[0]));
+        bool refused = false;
+        std::string message;
+        try {
+            scl::run_kalman_filter(p, scl::KalmanParameters{});
+        } catch (const scl::KalmanValidationError& e) {
+            refused = true;
+            message = e.what();
+        }
+        CHECK(refused);
+        // the message must locate the failure, not merely announce it
+        CHECK(message.find("step") != std::string::npos);
+        CHECK(message.find("NaN") != std::string::npos ||
+              message.find("infinity") != std::string::npos);
+    }
+}
+
+void test_the_refusal_does_not_reach_a_filter_that_is_merely_large() {
+    // DISCRIMINATING. Without this the check above is satisfied by a guard
+    // that refuses everything, and a Kalman filter over a stiff but finite
+    // model would stop working for no reason.
+    scl::KalmanProblem p = divergent_scalar_problem(1e130, 400);
+    bool refused = false;
+    scl::KalmanResult r;
+    try {
+        r = scl::run_kalman_filter(p, scl::KalmanParameters{});
+    } catch (const scl::KalmanValidationError&) {
+        refused = true;
+    }
+    CHECK(!refused);
+    CHECK(std::isfinite(r.smallest_posterior_eigenvalue));
+    for (double v : r.states) CHECK(std::isfinite(v));
+}
+
+void test_the_health_figure_alone_would_not_have_caught_it() {
+    // THE REASON THE CHECK IS NOT REDUNDANT, asserted rather than argued.
+    // If a running minimum over the posterior spectrum already detected a
+    // NaN, the new refusal would be dead code. It does not: std::min
+    // returns its first argument when the second is NaN, so a NaN spectrum
+    // leaves the minimum exactly where it started.
+    const double running = std::numeric_limits<double>::infinity();
+    const double nan_eigenvalue = std::nan("");
+    CHECK(std::isinf(std::min(running, nan_eigenvalue)));
+    CHECK(!std::isnan(std::min(running, nan_eigenvalue)));
+}
+
 }  // namespace
 
 int main() {
@@ -387,6 +465,9 @@ int main() {
     test_the_contract_also_holds_at_the_optimal_gain_over_many_steps();
     test_a_non_symmetric_transition_is_propagated_with_the_transpose();
     test_the_contract_faults();
+    test_a_filter_that_overflows_is_refused_rather_than_returned();
+    test_the_refusal_does_not_reach_a_filter_that_is_merely_large();
+    test_the_health_figure_alone_would_not_have_caught_it();
     std::printf("kalman analytic: %d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;
 }

@@ -147,6 +147,46 @@ std::vector<double> covariance_update(const std::vector<double>& p_predicted,
     return P;
 }
 
+namespace {
+
+//: Refuses a result carrying a non-finite value, naming WHICH array and
+//: WHICH step. A message that says only "non-finite result" sends the
+//: reader back to the recursion with no starting point, and the step index
+//: is the whole difference between a report and a shrug.
+void require_finite_results(const KalmanResult& result, std::size_t n, std::size_t m) {
+    struct Array {
+        const char* name;
+        const std::vector<double>* values;
+        std::size_t stride;
+    };
+    const Array arrays[] = {
+        {"posterior state x", &result.states, n},
+        {"posterior covariance P", &result.covariances, n * n},
+        {"innovation v", &result.innovations, m},
+        {"innovation covariance S", &result.innovation_covariances, m * m},
+        {"gain K", &result.gains, n * m},
+    };
+    for (const Array& array : arrays) {
+        for (std::size_t i = 0; i < array.values->size(); ++i) {
+            const double value = (*array.values)[i];
+            if (std::isfinite(value)) continue;
+            const std::size_t step = array.stride ? i / array.stride : 0;
+            std::ostringstream os;
+            os << array.name << " is " << (std::isnan(value) ? "NaN" : "an infinity")
+               << " at step " << step
+               << ". Every input to this filter was finite, so this is overflow "
+                  "inside the recursion and not a contract breach by the caller. "
+                  "It is refused rather than returned because the only health "
+                  "figure this operation publishes, smallest_posterior_eigenvalue, "
+                  "reports +infinity when the posteriors are NaN -- the value a "
+                  "perfectly conditioned filter gives";
+            throw KalmanValidationError(os.str());
+        }
+    }
+}
+
+}  // namespace
+
 KalmanResult run_kalman_filter(const KalmanProblem& problem,
                                const KalmanParameters& params) {
     const std::size_t n = problem.state_dimension;
@@ -267,6 +307,25 @@ KalmanResult run_kalman_filter(const KalmanProblem& problem,
         result.smallest_posterior_eigenvalue =
             std::min(result.smallest_posterior_eigenvalue, spectrum.front());
     }
+
+    // EVERY INPUT IS FINITE AND THE OUTPUT NEED NOT BE. Overflow inside the
+    // recursion is not a contract breach by the caller, so nothing above
+    // catches it, and the diagnostic this operation publishes is the one
+    // thing a NaN makes maximally reassuring: std::min(x, NaN) returns x, so
+    // a filter whose every posterior is NaN leaves
+    // smallest_posterior_eigenvalue at its initial +infinity -- the reading a
+    // perfectly conditioned filter gives.
+    //
+    // Measured, with all inputs finite and a scalar model: at |F| = 1e155 all
+    // 400 states, covariances, gains and innovation covariances came back
+    // non-finite and the eigenvalue reported +inf. At 1e150 it was 399 of 400
+    // and 1.2e268. Neither raised anything. That transition matrix is not a
+    // plausible model and the point is not its plausibility -- it is that the
+    // failure is SILENT and its indicator points the wrong way.
+    //
+    // lj_pairwise, fourier_transform_1d and least_squares all check their own
+    // results. This was the only operation that did not.
+    require_finite_results(result, n, m);
 
     return result;
 }

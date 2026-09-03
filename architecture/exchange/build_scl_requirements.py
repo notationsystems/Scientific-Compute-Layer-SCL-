@@ -565,6 +565,18 @@ DOCUMENT = {
         "it_is_parsed_not_typed": "read from the header by the generator, so a change to the default moves this artifact and reissues the pair rather than leaving the published value behind.",
         "what_it_does_not_authorise": "a consumer applying this cutoff to something other than a spectrum of the same kind. It is a relative cutoff on singular values or on Cholesky pivots, which are the same sort of object; it is not a general small-number threshold.",
     },
+    "published_refusals": {
+        "why_this_section_exists": "a refusal is part of an operation's contract and a consumer that learns it at runtime learns it from a traceback. These are the cases where a caller supplies inputs that pass every stated precondition and the operation still declines to return.",
+        "kalman_filter_linear_non_finite_result": {
+            "what_is_refused": "a run whose posterior states, posterior covariances, innovations, innovation covariances or gains contain a NaN or an infinity. Raised as KalmanValidationError naming the array and the step.",
+            "why_a_caller_can_hit_this_with_valid_inputs": "every input is validated for finiteness and every covariance for the five rules before the recursion starts. Overflow happens INSIDE the recursion, so a caller can breach nothing and still reach it.",
+            "what_the_operation_used_to_do": "return the result. Measured on a scalar model with 400 steps and all inputs finite: at |F| = 1e150, 399 of 400 posterior states were non-finite; at 1e155 and above, all 400 were. Neither raised anything.",
+            "why_the_published_diagnostic_could_not_be_used_instead": "smallest_posterior_eigenvalue is a running minimum and C++ std::min(x, NaN) returns x, so a wholly-NaN run leaves it at the +infinity it was initialised to -- the value a perfectly conditioned filter reports. The health figure moved in the WRONG DIRECTION as the arithmetic failed, which is why the refusal is a separate check and not a threshold on that number.",
+            "what_this_does_not_mean_for_a_consumer": "that reaching it indicates a DAQ-side defect. It indicates a model whose transition amplifies past binary64, which is a modelling judgement. The operation reports it rather than deciding it.",
+            "where_it_is_enforced": "require_finite_results in native/src/kalman.cpp, covered by native/tests/test_kalman_analytic.cpp with a discriminating case at |F| = 1e130 that must still succeed.",
+            "how_it_was_found": "scoring this layer against a numerical contract written elsewhere in the ecosystem, which requires that binary64 arithmetic reject non-finite results. See architecture/numeric_contract_conformance.yaml.",
+        },
+    },
     "unresolved_edges": {
         "comparability_is_weaker_than_identity": {
             "edge": "The annotating-parameter rule makes equal computation_identity compatible with different interpretations. Two Fourier results over the same samples with different dt are comparable as BIN-INDEXED VECTORS and are NOT comparable as SPECTRA, because bin k denotes a different physical frequency in each.",
