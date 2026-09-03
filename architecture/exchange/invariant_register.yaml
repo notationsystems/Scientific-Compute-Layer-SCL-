@@ -1,8 +1,8 @@
 "artifact": "invariant_register"
 "bent_zero_claims_held_here":
-  "count": 12
+  "count": 14
   "does_the_fifth_property_change_any_of_the_ten": "NO, and this is measured rather than assumed. recursive_computation's verdict was FAIL and its subject was generation_depth_bounded -- an invariant of THIS repository, not of the core. The probe recorded core_invariants_modified: 0 for it at the time and still does: the invariant was declared and never implemented, which is a truthfulness repair and then an implementation, never a core modification. So the ten verdicts stand as verdicts."
-  "mention_count": 2
+  "mention_count": 3
   "mentions_not_claims":
     - "document": "docs/PHASE_39_THE_REGISTER_AND_THE_FIRST_VERTICAL.md"
       "line": 168
@@ -10,6 +10,9 @@
     - "document": "docs/PHASE_39_THE_REGISTER_AND_THE_FIRST_VERTICAL.md"
       "line": 179
       "text": "`c80a2f0` held it at 73 with the fifth added. Every `Bent: zero` written before"
+    - "document": "docs/PHASE_42_TWO_RECORDS_OF_ONE_ECOSYSTEM.md"
+      "line": 237
+      "text": "**The pin was not bumped.** Moving it re-points every `Bent: zero`, every"
   "occurrences":
     - "document": "docs/PHASE_26_EXECUTION_RECORD_INTEGRATION.md"
       "line": 262
@@ -47,6 +50,12 @@
     - "document": "docs/PHASE_39_THE_REGISTER_AND_THE_FIRST_VERTICAL.md"
       "line": 170
       "text": "**Bent: zero.** No core invariant required modification in this phase."
+    - "document": "docs/PHASE_41_THE_ECOSYSTEM_HAS_A_CENSUS.md"
+      "line": 198
+      "text": "**Bent: zero.** No core invariant changed. The vendored submodule is"
+    - "document": "docs/PHASE_42_TWO_RECORDS_OF_ONE_ECOSYSTEM.md"
+      "line": 392
+      "text": "**Bent: zero.** No core invariant changed; the pin is unmoved at"
   "the_property_set_split": "ten of them were written when the generality probe declared FOUR properties; one was written after it declared five. Same words, two assertions. Which set each quantified over is verified against git in tests/test_invariant_register.py, not asserted here."
   "what_stops_it_recurring": "this block is derived by scanning the documents, so a `Bent: zero` written tomorrow and not accounted for here moves the register's digest and fails its test until someone re-derives -- which is the point at which they have to say what set they mean."
   "what_they_are": "every `Bent: zero` written in this repository's phase reports is a claim that no CORE invariant changed -- a claim about STE, the party with no enumeration."
@@ -55,7 +64,7 @@
 "extends": "core@1.0.0"
 "extends_join":
   "artifacts_declaring_a_different_core": []
-  "artifacts_declaring_the_core": 58
+  "artifacts_declaring_the_core": 75
   "counted_by": "parsing every YAML document, never by text search"
   "why_that_matters_here": "core.yaml recorded 26. Parsed, it is 32. A search for `extends: core@1.0.0` cannot see `\"extends\": \"core@1.0.0\"`, which is exactly what the shared canonical emitter writes -- so the artifacts invisible to the count were the canonically-emitted ones, the most carefully produced files in the pair."
 "joined_on":
