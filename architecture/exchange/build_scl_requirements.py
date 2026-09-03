@@ -18,9 +18,12 @@ filenames or documentation:
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 
 from canonical_yaml import canonical_bytes, canonical_sha256  # noqa: E402
 
@@ -134,9 +137,39 @@ _ORDERED = "required_and_significant"
 _UNORDERED = "not_required_rows_exchangeable"
 
 
+#: THE OPERATIONS THIS BINARY ACTUALLY REGISTERS, parsed from the registry
+#: rather than restated.
+#:
+#: MEASURED STALENESS, 2026-09-03. Every workload used to carry a
+#: hand-written `status_in_scl`, and least_squares still said
+#: NOT_IMPLEMENTED with a blocking requirement reading "Matrices, matrix
+#: multiplication, transpose, decompositions and linear solves must exist
+#: in SCL. None of them do." All five exist, the operation is registered,
+#: and this artifact is what the acquisition layer READS to learn what is
+#: owed -- so the published claim was that a built, tested workload could
+#: not be built at all.
+#:
+#: It is the same defect `primitives_missing` was made derived to fix, in
+#: the same entry, one field away. That comment says a list which must
+#: agree with another list will stop agreeing; a STATUS that must agree
+#: with a registry is the same object. So it is derived too, from the one
+#: place that cannot be wrong about it.
+#:
+#: NOT from `primitives_missing == []`, which pca disproves: pca needs no
+#: missing primitive and is genuinely not implemented. Having the parts is
+#: not being built.
+def _registered_operations():
+    source = (REPO_ROOT / "native" / "src" / "operation_registry.cpp").read_text()
+    table = source.split("kOperations[] = {", 1)[1].split("};", 1)[0]
+    return frozenset(re.findall(r'\{"([a-z0-9_]+)"', table))
+
+
+REGISTERED = _registered_operations()
+
+
 def workload(*, modality, minimum_observation_fields, required_metadata, uncertainty,
              conditions, ordering, structured, observation_requirements, model_parameters,
-             computational_parameters, primitives_required, status,
+             computational_parameters, primitives_required, name,
              notes, blocking_requirements=(), primitives_missing=None):
     """`blocking_requirements` is deliberately STRUCTURAL rather than prose
     in `notes`: a requirement buried in a paragraph arrives in the other
@@ -144,8 +177,22 @@ def workload(*, modality, minimum_observation_fields, required_metadata, uncerta
     answer. Each entry names a requirement that must be satisfied before
     the workload could be built at all -- a measured consequence of what
     the workload needs, never an argument for building it."""
+    derived_blocking = []
+    for entry in blocking_requirements:
+        entry = dict(entry)
+        # A REQUIREMENT THAT NAMES PRIMITIVES HAS A DERIVABLE STATUS, and
+        # a derivable status must not be hand-written beside the thing it
+        # is derivable from. `status` is accepted only for requirements
+        # this repository cannot check -- the daq-owned ones -- and is
+        # computed for the rest.
+        named = entry.pop("satisfied_when_these_are_not_missing", None)
+        if named is not None:
+            outstanding = sorted(p for p in named if SUBSTRATE[p]["classification"] == "MISSING")
+            entry["primitives_still_missing"] = outstanding
+            entry["status"] = "UNSATISFIED" if outstanding else "SATISFIED"
+        derived_blocking.append(entry)
     return {
-        "blocking_requirements": list(blocking_requirements),
+        "blocking_requirements": derived_blocking,
         "computational_parameters": computational_parameters,
         "condition_requirements": conditions,
         "minimum_observation_fields": minimum_observation_fields,
@@ -166,7 +213,8 @@ def workload(*, modality, minimum_observation_fields, required_metadata, uncerta
             if SUBSTRATE[p]["classification"] == "MISSING"),
         "primitives_required": primitives_required,
         "required_metadata": required_metadata,
-        "status_in_scl": status,
+        # DERIVED from the registry, never passed in. See _registered_operations.
+        "status_in_scl": "IMPLEMENTED" if name in REGISTERED else "NOT_IMPLEMENTED",
         "structured_data_requirements": structured,
         "uncertainty_requirements": uncertainty,
     }
@@ -188,7 +236,7 @@ WORKLOADS = {
         model_parameters=["none -- a transform asserts no model of the system"],
         computational_parameters=["direction", "normalization", "precision", "input_kind", "spectrum_convention"],
         primitives_required=["complex_arithmetic", "reductions", "transforms"],
-        status="IMPLEMENTED",
+        name="fourier_transform_1d",
         blocking_requirements=[
             {
                 "requirement": "ordered_scalar_sequence",
@@ -222,7 +270,7 @@ WORKLOADS = {
         model_parameters=["kernel, when the kernel is a modelling choice rather than a second observation"],
         computational_parameters=["mode_full_same_valid", "boundary_handling", "precision"],
         primitives_required=["reductions", "sliding_window"],
-        status="NOT_IMPLEMENTED",
+        name="convolution_1d",
         notes="Shares the ordered-1d modality with fourier_transform_1d, so its DAQ requirement is already satisfied wherever Fourier's is. Direct and FFT-based algorithms could share one mathematical operation identity.",
     ),
     "least_squares": workload(
@@ -243,7 +291,7 @@ WORKLOADS = {
         model_parameters=["the choice of design matrix / basis functions is a modelling assertion, not an observation"],
         computational_parameters=["solver_qr_cholesky_svd_or_normal_equations", "weighting", "precision"],
         primitives_required=["matrices", "matrix_multiplication", "transpose", "decompositions", "linear_solves"],
-        status="NOT_IMPLEMENTED",
+        name="least_squares",
         blocking_requirements=[
             {
                 "requirement": "stable_sample_and_variable_identity",
@@ -262,12 +310,25 @@ WORKLOADS = {
                 "status": "UNSATISFIED",
             },
             {
+                "requirement": "a_covariance_offered_for_whitening_must_be_positive_definite_by_the_operations_own_cutoff",
+                "owner": "daq",
+                "statement": "science/replicate_pairing.py now measures a covariance from paired replicate runs, and least_squares takes only a diagonal, so the caller whitens with a Cholesky factor. That identity holds for a KNOWN Sigma. A SAMPLE covariance over variables carrying an exact linear relation is positive SEMI-definite by construction, and the Cholesky then has no defined result. The obligation is to establish definiteness with the SAME rule the operation applies to the design -- a pivot at or below rank_tolerance times the largest pivot is zero -- and to drop the deficient direction deliberately rather than let it survive.",
+                "measured_basis": "The polymer row is exactly this case: an instrument reports Mn, Mw and PDI = Mw/Mn together, so in logs the third variable is identically the second minus the first and the third row of Sigma is the second minus the first. Over 2000 five-run replicate sets of that situation a plain Cholesky ACCEPTED 828 and REFUSED 1172, the outcome decided by where the last pivot lands relative to zero. Every accepted case had a pivot ratio below the operation own 1e-12 default. A pivoted Cholesky at that tolerance returned effective rank 2 for all 2000. Measured in tests/test_least_squares_semidefinite_covariance.py and recorded in native/include/scl/least_squares.hpp.",
+                "consequence_if_unmet": "Not an inexact fit -- a NON-DETERMINISTIC one. Three times in five the whitening refuses loudly; the other two it succeeds and the deficient row of the whitened problem is made entirely of rounding noise, small enough to look harmless because numerator and denominator vanish together. The same data gives either outcome on a different machine.",
+                "why_it_is_daq_owned": "the covariance is produced there. SCL cannot check a Sigma it never receives, because the wire carries weights only -- so this is stated rather than enforced, the same disposition as the two rows above it.",
+                "status": "UNSATISFIED",
+            },
+            {
                 "requirement": "linear_algebra_primitive_family",
                 "owner": "scl",
-                "statement": "Matrices, matrix multiplication, transpose, decompositions and linear solves must exist in SCL. None of them do.",
-                "measured_basis": "substrate_inventory classifies all five as MISSING with traced evidence.",
+                "statement": "Matrices, matrix multiplication, transpose, decompositions and linear solves must exist in SCL.",
+                "measured_basis": "substrate_inventory, parsed rather than restated -- see the derived `status` below.",
                 "consequence_if_unmet": "The workload cannot be built at all. This is SCL-owned work, recorded here so DAQ can see which gaps are not theirs to close.",
-                "status": "UNSATISFIED",
+                "satisfied_when_these_are_not_missing": [
+                    "matrices", "matrix_multiplication", "transpose",
+                    "decompositions", "linear_solves",
+                ],
+                "what_this_row_used_to_say": "None of them do -- with measured_basis `substrate_inventory classifies all five as MISSING`, and status UNSATISFIED, while the derived `primitives_missing` one field away in the same entry read []. All five had been built. The artifact contradicted itself inside one workload and published the wrong half to the counterparty.",
             },
         ],
         notes="Requires the entire missing linear-algebra family. Ordering is NOT required, which is the sharpest modality contrast with the transform family. Its blocking_requirements split across BOTH repositories, which is why they name an owner.",
@@ -288,7 +349,7 @@ WORKLOADS = {
         model_parameters=["centering and scaling choices are modelling assertions"],
         computational_parameters=["n_components", "centering", "scaling", "decomposition_method_svd_or_eigen", "precision"],
         primitives_required=["matrices", "matrix_multiplication", "transpose", "decompositions"],
-        status="NOT_IMPLEMENTED",
+        name="pca",
         blocking_requirements=[
             {
                 "requirement": "stable_sample_and_variable_identity",
@@ -341,7 +402,7 @@ WORKLOADS = {
         ],
         computational_parameters=["precision", "gain_solve_method_cholesky_or_ldlt", "covariance_update_form_standard_or_joseph"],
         primitives_required=["matrices", "matrix_multiplication", "transpose", "linear_solves", "covariance_propagation", "psd_handling"],
-        status="IMPLEMENTED",
+        name="kalman_filter_linear",
         blocking_requirements=[
             {
                 "requirement": "structured_measurement_uncertainty",
@@ -386,7 +447,7 @@ WORKLOADS = {
         model_parameters=["Kp, Ki, Kd and the setpoint are asserted control choices, never observations"],
         computational_parameters=["anti_windup_strategy", "derivative_filtering", "precision"],
         primitives_required=["reductions", "numerical_integration", "numerical_differentiation", "state_transitions"],
-        status="NOT_IMPLEMENTED",
+        name="pid_controller",
         notes="PURE COMPUTATION ONLY. Physical actuation is explicitly out of scope: connecting a controller output to equipment is physical intervention on the system under study, and no actuation-authority boundary exists in this architecture. Carried forward as unresolved.",
     ),
     "viterbi": workload(
@@ -404,7 +465,7 @@ WORKLOADS = {
         model_parameters=["transition matrix A, emission matrix B and initial distribution pi are all asserted model choices, never observations"],
         computational_parameters=["log_space_or_linear", "tie_breaking_rule", "precision"],
         primitives_required=["dynamic_programming", "reductions", "argmax", "backtracking"],
-        status="NOT_IMPLEMENTED",
+        name="viterbi",
         notes="Its primitives are shared with no other candidate here, so it would establish a third computational family rather than extend either existing one.",
     ),
 }

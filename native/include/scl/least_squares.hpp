@@ -114,6 +114,80 @@
 // this, and a caller holding a covariance had no way to learn from the
 // operation that whitening is the route. tests/test_least_squares_
 // correlated_errors.py measures the agreement rather than asserting it.
+//
+// ---------------------------------------------------------------------
+// AND THE TWO BOUNDARIES ABOVE COMPOSE. Recorded 2026-09-03, measured.
+//
+// They were written side by side and called "the same family", and then
+// never put together. Put together they say something neither says
+// alone, and it is about the route the second one PRESCRIBES.
+//
+// The whitening result holds for a KNOWN Sigma = L L^T. That word is
+// doing more work than it looks. A caller who obtains Sigma from
+// replicate runs -- which is now the expected route, since the
+// acquisition layer measures one and the core joins on it -- has a
+// SAMPLE covariance, and if the variables carry an exact linear
+// relation, that sample covariance is positive SEMI-definite by
+// construction. The polymer row is exactly that case: Mn, Mw and
+// PDI = Mw/Mn from one instrument, in logs, so log PDI is identically
+// log Mw - log Mn and the third row of Sigma is the second minus the
+// first, to rounding.
+//
+// Sigma is then singular, and the Cholesky the prescription calls for
+// has no defined result. What it does instead is decided by whether the
+// last pivot lands just above or just below zero.
+//
+// MEASURED over 2000 independent five-run replicate sets of the same
+// physical situation:
+//
+//     plain Cholesky ACCEPTED (silent)            828
+//     plain Cholesky REFUSED  (loud)             1172
+//     accepted cases whose pivot ratio
+//         was below this operation's own
+//         rank_tolerance default of 1e-12        100%
+//
+// So the failure mode is not "inexact". It is NON-DETERMINISTIC: the
+// same situation refuses loudly three times in five and, the other two,
+// succeeds and returns a whitened third row made entirely of rounding
+// noise -- small enough to look harmless, since numerator and
+// denominator vanish together.
+//
+// THE REPAIR IS ALREADY IN THIS OPERATION'S OWN VOCABULARY, and costs
+// the caller nothing new. `rank_tolerance` treats sigma_j as zero when
+// sigma_j <= rank_tolerance * sigma_max. Apply the SAME rule to the
+// caller's Sigma -- a pivoted Cholesky that treats a pivot at or below
+// rank_tolerance * (largest pivot) as zero -- and the deficient
+// direction is dropped on purpose instead of surviving by accident.
+//
+//     pivoted Cholesky at rank_tolerance 1e-12,
+//         same 2000 sets: effective rank 2       2000 of 2000
+//
+// Deterministic, and it reports the deficiency rather than hiding it.
+//
+// SO THE CALLER OBLIGATION IS STATED IN FULL: whiten with a Sigma that
+// is positive DEFINITE, and establish that with the same cutoff this
+// operation applies to the design. A rank-deficient Sigma is not a
+// reason to refuse the fit -- it is the caller's own row dependence
+// arriving from the other side, and dropping the deficient direction is
+// the correct response, taken deliberately.
+//
+// NO CHANGE TO THE OPERATION IS PROPOSED. The wire still carries
+// weights; Sigma is still the caller's. What was missing is that the
+// prescription named a precondition it did not state, in the one case
+// the boundary above uses as its own worked example.
+// tests/test_least_squares_semidefinite_covariance.py measures both
+// rates rather than asserting them, and asserts the PROPERTY -- that
+// both outcomes are reachable -- rather than the counts, which would
+// bind the finding to one interpreter's float and RNG behaviour.
+//
+// VERIFIED BY PLANTING, three ways, each run and restored. Breaking the
+// relation in the main path fails the premise, the non-determinism and
+// the below-cutoff claims together. Loosening rank_tolerance to 1e-20
+// fails the determinism and the structural claims, which is the
+// tolerance being load-bearing rather than decorative. And giving the
+// CONTROL the exact relation fails the control -- the plant that had to
+// fail, since the control's whole job is to show the singularity comes
+// from the relation and not from the sample size.
 // ---------------------------------------------------------------------
 
 #include <cstddef>
