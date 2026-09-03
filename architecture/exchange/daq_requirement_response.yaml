@@ -79,11 +79,12 @@
     "what_the_requirement_asked": "Identical to the least_squares requirement of the same name, and satisfied by the same DAQ-side capability -- both are the multivariate_observation_table modality."
 "row_accounting":
   "answered_here": 6
-  "daq_owned_rows_upstream": 8
+  "daq_owned_rows_upstream": 9
   "how_that_assertion_is_actually_held": "BY CONSTRUCTION, not by a check. not_answered_and_why is the derived complement of the answered set within the DAQ-owned rows, so the two cannot fail to reconcile while the derivation stands. The generator's completeness branch is therefore UNREACHABLE today and is recorded as silent rather than as passing; what it guards against is that derivation being replaced by a written-out list, which is the edit that would reintroduce the defect."
   "not_answered_and_why":
     "fourier_transform_1d::annotating_sample_spacing": "SATISFIED upstream before this artifact existed, on evidence the requirements artifact records against the row itself. Listed so the count reconciles and the row is visibly considered rather than invisibly skipped."
     "fourier_transform_1d::ordered_scalar_sequence": "SATISFIED upstream before this artifact existed, on evidence the requirements artifact records against the row itself. Listed so the count reconciles and the row is visibly considered rather than invisibly skipped."
+    "least_squares::a_covariance_offered_for_whitening_must_be_positive_definite_by_the_operations_own_cutoff": "SATISFIED upstream before this artifact existed, on evidence the requirements artifact records against the row itself. Listed so the count reconciles and the row is visibly considered rather than invisibly skipped."
   "the_assertion": "answered + not_answered == daq_owned_rows_upstream. Every DAQ-owned row is in exactly one of the two."
   "what_does_fire": "the stray-row refusal. A response naming a row the requirements artifact does not declare -- a row withdrawn upstream, or a typo -- stops the generator. Detector-proved by planting one."
 "rows_addressed_are_derived_not_listed": "every DAQ-owned blocking row the requirements artifact declares, across EVERY workload it declares -- not a workload named here. The counts below are computed from the artifact; a subset read as the set is a mistake this pair has now made three times, and the previous version of this field described a derivation whose scope was nonetheless a hardcoded name."
