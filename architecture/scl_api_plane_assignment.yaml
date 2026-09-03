@@ -1,0 +1,100 @@
+# THE COMPUTE LAYER'S HALF OF THE API PLANE ASSIGNMENT.
+#
+# The acquisition layer holds the full map -- thirteen module families,
+# four planes, the three-branch amendment -- in
+# architecture/api_plane_assignment.yaml. This file is not a copy of it.
+# It is this layer's own response set, classified under the same branches,
+# and TWO FINDINGS the compute layer produced that the acquisition layer
+# could not, because they are about shapes only this side has.
+#
+# THE BRANCHES ARE NOT RESTATED HERE. They are declared once, in the
+# acquisition layer's record, and this file cites them. One meaning, one
+# encoding -- and a branch vocabulary written down twice is two
+# vocabularies with a schedule for disagreeing.
+extends: core@1.0.0
+
+artifact: scl_api_plane_assignment
+owner: scl
+status: mapped_2026_09_03
+enforcement: tests/test_api_plane_assignment.py
+
+the_branches_are_declared_elsewhere:
+  where: "the acquisition layer, architecture/api_plane_assignment.yaml, response_branches"
+  the_three: "claim, refusal, observation"
+  why_not_restated: "a vocabulary in two files is two vocabularies. This side asserts its types against those three names and does not define them."
+
+# ----------------------------------------------------------------------
+# FINDING ONE. The branch of a response can depend on a field of that
+# response, so the invariant is not checkable per TYPE.
+# ----------------------------------------------------------------------
+the_branch_can_be_conditional:
+  the_case: "SCLResult. When status is `completed` it is a CLAIM and carries request_identity, output_identity and computation_identity. When status is `halted` it is a REFUSAL, and output_identity and computation_identity are None BY DESIGN -- the docstring says so: an absent output is never represented as an empty byte string or any placeholder."
+  what_that_means_for_the_invariant: "one type, two branches, decided at runtime by its own status field. So `every API response carries a canonical reference or declares itself an observation` cannot be checked by looking at type definitions. It has to be checked PER INSTANCE, against the branch that instance is in."
+  and_it_is_the_right_design_rather_than_a_problem: "the alternative is a halted result carrying a computation_identity for a computation that did not happen, which would be a reference to nothing. Refusing to mint one is correct. What the invariant has to accommodate is that the same type answers differently."
+  how_it_is_enforced: "tests/test_api_plane_assignment.py exercises both statuses and asserts the reference is present in one and absent in the other -- so a halted result that started minting identities fails, and so does a completed one that stopped."
+
+# ----------------------------------------------------------------------
+# FINDING TWO. This layer's refusals do not carry codes.
+# ----------------------------------------------------------------------
+the_halted_branch_has_no_reason_vocabulary:
+  measured: "SCLResult.detail is populated straight from the native response payload -- `detail=response.get(`detail`)` in python/scl/client.py. It is a free string produced by the binary. There is no code, no enumeration, and nothing anywhere declares the set of ways a computation may halt."
+  why_it_matters: "the refusal branch requires a reason from a DECLARED, CLOSED vocabulary, and the reason is that a consumer must be able to BRANCH on it. The acquisition layer's refusals do: MISSING_UNCERTAINTY_KIND, RANK_DEFICIENT_COVARIANCE, AMBIGUOUS_RUN_IDENTITY are codes a caller can act on. A consumer of this layer can only log."
+  the_asymmetry_stated_plainly: "across one boundary in one pair, one side's refusals are machine-actionable and the other side's are prose. Neither side noticed until an API invariant asked both the same question."
+  status: RECORDED_NOT_REPAIRED
+  why_it_is_not_repaired_here: "introducing a halt-code vocabulary changes what every caller may branch on and what the native binary must emit. It is a contract change with a blast radius, not a patch -- the same disposition as the core pin bump, which is recorded with a preregistration rather than performed in passing. What is owed is the preregistration, and this file records the obligation rather than discharging it."
+  what_would_close_it: "a closed set of halt reasons declared where the operation contract lives, emitted by the native layer, carried through detail or beside it, and published in architecture/exchange/scl_requirements.yaml so the acquisition layer joins on it rather than parsing prose."
+
+# ----------------------------------------------------------------------
+# The response set, derived from public return annotations.
+# ----------------------------------------------------------------------
+response_types:
+  SCLResult:
+    branch: "conditional"
+    branch_when_completed: "claim"
+    branch_when_halted: "refusal"
+    reference_field: "computation_identity"
+    reason_field: "detail"
+    note: "the reason field exists and its vocabulary does not -- see the_halted_branch_has_no_reason_vocabulary."
+  LJMethodBlock:
+    branch: "component"
+    carried_by: "SCLResult"
+    note: "a method block asserts nothing on its own. It says HOW a result was produced and travels attached to one, so the API obligation lands on the enclosing response."
+  FourierMethodBlock:
+    branch: "component"
+    carried_by: "SCLResult"
+  Quantity:
+    branch: "component"
+    carried_by: "SCLResult"
+    note: "value, unit, uncertainty and uncertainty_kind. It carries no reference of its own and needs none: it is not returned alone."
+
+vendored_response_types:
+  owner: "the deterministic-state-architecture core, at execution/engine.py and execution/specification.py"
+  status: "OBSERVED_NOT_DECLARED"
+  what_would_make_them_declared: "the core stating the branch of each in its own tree. Until then this records what they carry, not what they are."
+  observed:
+    ExecutionResult:
+      observed_branch: "claim"
+      carries: "the core's own identity discipline, which python/scl/ste_adapter.py translates rather than replaces"
+    ExecutionSpecification:
+      observed_branch: "observation"
+      carries: "the program and inputs a run was specified with"
+
+# ----------------------------------------------------------------------
+a_fourth_category_this_side_needed:
+  name: component
+  what_it_is: "a value object carried INSIDE a response rather than returned as one. Method blocks and quantities are the cases here."
+  why_it_is_not_a_branch: "it makes no assertion a consumer receives on its own. Filing a Quantity as a claim would oblige it to carry a reference, and the right place for that reference is the response that encloses it -- putting one on the component would be a second, weaker identity for the same fact."
+  its_requirement: "it must name what carries it, so the obligation is traceable to a response that has one."
+  relation_to_the_acquisition_layer_s_fourth_category: "that side needed `not_a_response` for STORE HANDLES; this side needed `component` for VALUE OBJECTS. Different things, and both arrived the same way -- the enforcement refused an entry whose required field was empty, which is how a classification that was not really made becomes visible."
+
+verified_by_planting_the_defect:
+  a_component_with_no_carrier: "one carried_by emptied. test_a_component_names_what_carries_it FAILED -- a component whose obligation is untraceable is a classification that was not made."
+  the_branch_vocabulary_copied_into_this_record: "a response_branches block added here. test_the_branch_vocabulary_is_cited_and_not_redefined FAILED. The vocabulary is the acquisition layer's; a second copy would be a second vocabulary."
+  a_halt_vocabulary_introduced_without_updating_the_record: "a HALT_REASONS constant added to python/scl/client.py. test_the_halt_reason_gap_is_still_open_and_still_recorded FAILED -- the gap check asserts the gap is STILL OPEN, so closing it fails until the record is moved with it."
+  a_response_type_dropped_from_the_record: "Quantity deleted. test_every_response_type_this_layer_returns_is_classified FAILED, naming it and the module it comes from."
+  and_the_direction_of_the_third_is_deliberate: "a check that passes while a defect exists is normally the thing this project refuses. Here it is correct: the record says the gap is open, and a repository that quietly repaired itself while its record still described the gap would be the stale-claim shape the pair already checks for across the boundary. The check binds the two together."
+
+what_this_record_does_not_do:
+  no_branch_vocabulary_is_defined_here: "cited from the acquisition layer's record."
+  no_halt_codes_are_invented: "the gap is measured and left open with what would close it."
+  no_proof_root_is_claimed: "request_identity, output_identity and computation_identity are content commitments. They answer whether these are the same bytes; they do not answer what supports the result. No proof root exists on this side either."
