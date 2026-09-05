@@ -19,6 +19,7 @@
 #include "scl/protocol.hpp"
 
 #include <chrono>
+#include <cmath>
 #include <sstream>
 
 namespace scl {
@@ -86,7 +87,18 @@ FourierParameters decode_configuration(const std::vector<uint8_t>& bytes) {
     // a parameter identity identifies the parameters. Found by the
     // clause-2 conformance check: garbage in these bytes was accepted and
     // silently ignored.
-    if (!params.has_sample_spacing && params.sample_spacing_seconds != 0.0) {
+    //
+    // `!= 0.0` IS NOT ENOUGH, and the hole is the exact case this guard exists
+    // to close. IEEE-754 says -0.0 == +0.0, so (-0.0 != 0.0) is FALSE and a
+    // payload carrying negative zero in the ignored slot walks straight
+    // through -- decoding to the same meaning, "absent", while hashing to a
+    // different parameters_identity. The guard was defeated by the one value
+    // that is byte-different from and numerically equal to the value it tests
+    // against. std::signbit is the predicate that separates them, because it
+    // reads the sign BIT rather than comparing magnitudes.
+    if (!params.has_sample_spacing &&
+        (params.sample_spacing_seconds != 0.0 ||
+         std::signbit(params.sample_spacing_seconds))) {
         std::ostringstream os;
         os << "sample_spacing_seconds must be 0 when has_sample_spacing is 0, got "
            << params.sample_spacing_seconds

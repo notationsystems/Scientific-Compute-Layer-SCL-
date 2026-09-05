@@ -268,6 +268,52 @@ void test_a_rank_deficient_covariance_is_admitted() {
     CHECK(std::isinf(r.condition_number));   // reported, not hidden
 }
 
+// ------------------------------------ a finite matrix with a non-finite spectrum
+//
+// RULE 1 establishes that every ENTRY is finite. It does not establish that the
+// SPECTRUM is: Jacobi rotations on entries near DBL_MAX overflow, and inf - inf
+// is NaN. Before this was checked, validate_covariance reported fault=kNone and
+// condition_number=0 for these inputs -- 0 being the reading a PERFECTLY
+// CONDITIONED matrix gives -- because both accumulators absorb NaN:
+// std::max(acc,NaN) and std::min(acc,NaN) return acc, so largest_magnitude
+// stayed at its 0.0 seed and smallest_magnitude at its +inf seed, and the PSD
+// gate also passed since (NaN < -budget) is false.
+
+void test_a_finite_matrix_can_have_a_non_finite_spectrum_and_is_refused() {
+    const double MX = std::numeric_limits<double>::max();
+    struct Case { std::vector<double> m; std::size_t n; };
+    const Case cases[] = {
+        { {MX, MX, MX, MX}, 2 },
+        { {MX, MX / 1.0000001, MX / 1.0000001, MX}, 2 },
+    };
+    for (const Case& c : cases) {
+        for (double v : c.m) CHECK(std::isfinite(v));   // the premise
+        scl::CovarianceParameters p;
+        scl::CovarianceReport r = scl::validate_covariance(c.m, c.n, c.n, p);
+
+        bool spectrum_finite = true;
+        for (double e : r.eigenvalues) if (!std::isfinite(e)) spectrum_finite = false;
+        CHECK(!spectrum_finite);                        // the trap is reachable
+        CHECK(r.fault == scl::CovarianceFault::kNonFiniteSpectrum);
+        CHECK(!r.detail.empty());
+        // and the summary must not read as health for a caller who skips the fault
+        CHECK(std::isnan(r.condition_number));
+        CHECK(r.condition_number != 0.0);
+    }
+}
+
+void test_a_well_scaled_matrix_is_untouched_by_the_new_rule() {
+    // DISCRIMINATING. A rule that refused everything would satisfy the test
+    // above perfectly and break every ordinary covariance in the process.
+    const std::vector<double> ok = {2.0, 0.3, 0.3, 1.0};
+    scl::CovarianceParameters p;
+    scl::CovarianceReport r = scl::validate_covariance(ok, 2, 2, p);
+    CHECK(r.fault == scl::CovarianceFault::kNone);
+    CHECK(std::isfinite(r.condition_number));
+    CHECK(r.condition_number > 0.0);
+    for (double e : r.eigenvalues) CHECK(std::isfinite(e));
+}
+
 }  // namespace
 
 int main() {
@@ -281,6 +327,8 @@ int main() {
     test_the_verdict_does_not_depend_on_the_unit();
     test_a_refusal_still_carries_the_measurement();
     test_a_rank_deficient_covariance_is_admitted();
+    test_a_finite_matrix_can_have_a_non_finite_spectrum_and_is_refused();
+    test_a_well_scaled_matrix_is_untouched_by_the_new_rule();
 
     std::printf("covariance: %d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

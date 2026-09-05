@@ -177,6 +177,50 @@ CovarianceReport validate_covariance(const std::vector<double>& matrix,
     report.smallest_eigenvalue = report.eigenvalues.front();
     report.largest_eigenvalue = report.eigenvalues.back();
 
+    // RULE 5b. THE SPECTRUM MUST BE FINITE, and that is not implied by RULE 1.
+    // RULE 1 established that every ENTRY is finite. It says nothing about the
+    // eigenvalues: Jacobi rotations on entries near DBL_MAX overflow, and the
+    // products then produce inf - inf. Measured through this exact function,
+    // every input entry finite and symmetric, fault previously kNone:
+    //
+    //     2x2 of DBL_MAX                  -> 2 of 2 eigenvalues NaN
+    //     near-singular 4x4 at DBL_MAX    -> 4 of 4 NaN
+    //     near-singular 8x8 / 16x16       -> 8 of 8 / 16 of 16 NaN
+    //
+    // This must be checked BEFORE the two folds below, and the reason is the
+    // whole point. std::max(acc, NaN) and std::min(acc, NaN) both return acc,
+    // so a NaN spectrum leaves largest_magnitude at its 0.0 seed and
+    // smallest_magnitude at its +inf seed. `smallest_magnitude > 0.0` is then
+    // true, and condition_number is computed as 0.0 / inf = 0 -- a PERFECTLY
+    // CONDITIONED matrix. The PSD gate below then also passes, because
+    // (NaN < -psd_budget) is false. A wholly invalid covariance was certified
+    // clean, with a plausible in-range number attached.
+    //
+    // Seeding an accumulator at a DOMAIN BOUND (0.0 for a magnitude) is what
+    // makes the failure legible as health rather than as an error: the seed is
+    // itself a value the quantity can legitimately take.
+    for (std::size_t i = 0; i < report.eigenvalues.size(); ++i) {
+        if (std::isfinite(report.eigenvalues[i])) continue;
+        report.fault = CovarianceFault::kNonFiniteSpectrum;
+        // AND POISON THE SUMMARY FIELDS ON THE WAY OUT. condition_number
+        // defaults to 0.0, which is the reading a perfectly conditioned matrix
+        // gives -- so returning early on a fault while leaving the default in
+        // place reproduces this very defect one level up, for any caller that
+        // reads the number without checking the fault. NaN is the right
+        // residue: it is not a value the quantity can legitimately take.
+        report.condition_number = std::numeric_limits<double>::quiet_NaN();
+        std::ostringstream os;
+        os << "every entry of this covariance is finite and its spectrum is not: "
+           << "eigenvalue " << i << " of " << report.eigenvalues.size() << " is "
+           << (std::isnan(report.eigenvalues[i]) ? "NaN" : "an infinity")
+           << ". The Jacobi rotation overflowed, which entry-wise finiteness "
+              "does not prevent. Refused rather than reported, because the "
+              "condition number computed from a non-finite spectrum comes out "
+              "as 0 -- the value a perfectly conditioned matrix gives";
+        report.detail = os.str();
+        return report;
+    }
+
     double largest_magnitude = 0.0;
     double smallest_magnitude = std::numeric_limits<double>::infinity();
     for (double lambda : report.eigenvalues) {

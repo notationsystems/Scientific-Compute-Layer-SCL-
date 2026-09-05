@@ -99,6 +99,12 @@ enum class CovarianceFault {
     kNonFiniteEntry,    //: NaN or an infinity
     kNotSymmetric,      //: asymmetry beyond symmetry_tolerance
     kNotPositiveSemidefinite,  //: lambda_min below -psd_tolerance * scale
+    //: The ENTRIES were all finite (kNonFiniteEntry did not fire) and the
+    //: SPECTRUM is not. Those are different facts: Jacobi rotations on entries
+    //: near DBL_MAX overflow, and a finite input matrix can have a wholly NaN
+    //: spectrum. Measured, all with fault previously reported as kNone: a 2x2
+    //: of DBL_MAX, and near-singular 4x4/8x8/16x16 matrices at DBL_MAX.
+    kNonFiniteSpectrum,
 };
 
 struct CovarianceParameters {

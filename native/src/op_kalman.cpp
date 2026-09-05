@@ -107,9 +107,24 @@ Configuration decode_configuration(const std::vector<uint8_t>& bytes) {
 
     c.parameters.symmetry_tolerance = read_double_le(bytes, 24);
     c.parameters.psd_tolerance = read_double_le(bytes, 32);
+    // `!(x >= 0.0)` REJECTS NaN (every comparison with NaN is false, so the
+    // negation is true) and ACCEPTS -0.0, because -0.0 >= 0.0 is true. Negative
+    // zero is numerically identical to positive zero everywhere these
+    // tolerances are used, so it is a second byte encoding of one meaning --
+    // two requests that compute the same thing and carry different parameter
+    // identities. Refused rather than silently canonicalised: normalising it
+    // here would mean the wire format accepts bytes the contract says are not
+    // a valid encoding, and the caller would never learn.
     if (!(c.parameters.symmetry_tolerance >= 0.0) || !(c.parameters.psd_tolerance >= 0.0)) {
         throw OperationValidationError(
             "symmetry_tolerance and psd_tolerance must be finite and non-negative");
+    }
+    if (std::signbit(c.parameters.symmetry_tolerance) ||
+        std::signbit(c.parameters.psd_tolerance)) {
+        throw OperationValidationError(
+            "symmetry_tolerance and psd_tolerance must not be negative zero -- "
+            "-0.0 is numerically equal to 0.0 and encodes the same meaning in "
+            "different bytes, which would give one computation two identities");
     }
 
     c.n = static_cast<std::size_t>(n);
