@@ -165,3 +165,17 @@ cmake --build native/build_cuda
 # tests/test_cpu_cuda_equivalence.py picks this up automatically via the
 # cuda_cli_path fixture (skips cleanly if nvcc is not on PATH)
 ```
+
+## Licence
+
+Apache License 2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+Copyright 2026 Notation Systems Inc.
+
+Apache-2.0 was chosen over MIT for its explicit patent grant (§3) and its
+requirement that modifications be marked (§4b) — both matter more than usual
+for a layer whose whole claim is that a result can be traced to exactly the
+computation that produced it.
+
+Note the CUDA backend has been compiled and linked but **never executed on a
+device** in any session to date. It is off by default. See "CUDA backend
+status" above before relying on it.
